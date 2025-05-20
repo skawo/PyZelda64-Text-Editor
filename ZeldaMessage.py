@@ -68,31 +68,31 @@ class Message:
             self.boxType = record.boxType
             self.boxPosition = record.boxPosition
 
-            self.textData = self.GetStringData()
+            self.textData = self.__GetStringData()
         else:
             self.messageId = record.messageId & 0xFFFF
-            self.boxType = self.get_byte()
-            self.boxPosition = self.get_byte() 
-            self.majoraIcon = self.get_byte()
-            self.majoraJumpTo = self.get_halfword()
-            self.majoraFirstPrice = self.get_halfword()
-            self.majoraSecondPrice = self.get_halfword()
-            self.get_halfword() # Padding
+            self.boxType = self.__get_byte()
+            self.boxPosition = self.__get_byte() 
+            self.majoraIcon = self.__get_byte()
+            self.majoraJumpTo = self.__get_halfword()
+            self.majoraFirstPrice = self.__get_halfword()
+            self.majoraSecondPrice = self.__get_halfword()
+            self.__get_halfword() # Padding
 
-            self.textData = self.GetStringData()
+            self.textData = self.__GetStringData()
 
-    def get_byte(self):
+    def __get_byte(self):
         return int.from_bytes(self.reader.read(1))
     
-    def get_halfword(self):
+    def __get_halfword(self):
         return struct.unpack('>h', self.reader.read(2))[0]
     
-    def get_word(self):
+    def __get_word(self):
         return struct.unpack('>w', self.reader.read(4))[0]
 
-    def GetStringData(self):
+    def __GetStringData(self):
         char_data = []
-        cur_byte = self.get_byte()
+        cur_byte = self.__get_byte()
 
         controlCodeType = MajoraControlCode if self.mode == MessageMode.Majora else OcarinaControlCode
         func = self.GetControlCodeMajora if self.mode == MessageMode.Majora else self.GetControlCode
@@ -124,7 +124,7 @@ class Message:
                     char_data.extend(f"<UNK {cur_byte:X}>")
 
             if self.reader.tell() != len(self.reader.getvalue()):
-                cur_byte = self.get_byte()
+                cur_byte = self.__get_byte()
             else:
                 cur_byte = controlCodeType.END
 
@@ -148,7 +148,7 @@ class Message:
             code_insides = MajoraMsgColor(code.value).name
 
         elif code == MajoraControlCode.SHIFT:
-            num_spaces = self.get_byte()
+            num_spaces = self.__get_byte()
             code_insides = f"{MajoraControlCode.SHIFT}:{num_spaces}"
 
         elif code == MajoraControlCode.LINE_BREAK:
@@ -166,11 +166,11 @@ class Message:
             MajoraControlCode.DELAY_END,
             MajoraControlCode.FADE
         ]:
-            delay = self.get_halfword()
+            delay = self.__get_halfword()
             code_insides = f"{code.name}:{delay}"
 
         elif code == MajoraControlCode.SOUND:
-            sound_id = self.get_halfword()
+            sound_id = self.__get_halfword()
             code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
 
         else:
@@ -185,11 +185,11 @@ class Message:
 
         try:
             if code == OcarinaControlCode.COLOR:
-                color = OcarinaMsgColor(self.get_byte())
+                color = OcarinaMsgColor(self.__get_byte())
                 code_insides = color.name
             
             elif code == OcarinaControlCode.ICON:
-                icon_id = self.get_byte()
+                icon_id = self.__get_byte()
 
                 try: icon_name = OcarinaIcon(icon_id).name
                 except: icon_name = str(icon_id)
@@ -200,44 +200,44 @@ class Message:
                 return list("\n")
             
             elif code == OcarinaControlCode.SHIFT:
-                num_spaces = self.get_byte()
+                num_spaces = self.__get_byte()
                 code_insides = f"{OcarinaControlCode.SHIFT.name}:{num_spaces}"
             
             elif code == OcarinaControlCode.DELAY:
-                num_frames = self.get_byte()
+                num_frames = self.__get_byte()
                 code_insides = f"{OcarinaControlCode.DELAY.name}:{num_frames}"
             
             elif code == OcarinaControlCode.FADE:
-                num_frames_fade = self.get_byte()
+                num_frames_fade = self.__get_byte()
                 code_insides = f"{OcarinaControlCode.FADE.name}:{num_frames_fade}"
             
             elif code == OcarinaControlCode.FADE2:
-                num_frames_fade2 = self.get_halfword()
+                num_frames_fade2 = self.__get_halfword()
                 code_insides = f"{OcarinaControlCode.FADE2.name}:{num_frames_fade2}"
             
             elif code == OcarinaControlCode.SOUND:
-                sound_id = self.get_halfword()
+                sound_id = self.__get_halfword()
                 code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
             
             elif code == OcarinaControlCode.SPEED:
-                speed = self.get_byte()
+                speed = self.__get_byte()
                 code_insides = f"{OcarinaControlCode.SPEED.name}:{speed}"
             
             elif code == OcarinaControlCode.HIGH_SCORE:
-                score_id = self.get_byte()
+                score_id = self.__get_byte()
                 code_insides = f"{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore(score_id).name if hasattr(OcarinaHighScore, str(score_id)) else str(score_id)}"
             
             elif code == OcarinaControlCode.JUMP:
-                msg_id = self.get_halfword()
+                msg_id = self.__get_halfword()
                 code_insides = f"{OcarinaControlCode.JUMP.name}:{msg_id:04X}"
             
             elif code == OcarinaControlCode.NEW_BOX:
                 return list(f"\n<{OcarinaControlCode.NEW_BOX.name}>\n")
             
             elif code == OcarinaControlCode.BACKGROUND:
-                id1 = self.get_byte()
-                id2 = self.get_byte()
-                id3 = self.get_byte()
+                id1 = self.__get_byte()
+                id2 = self.__get_byte()
+                id3 = self.__get_byte()
                 background_id = int.from_bytes([id3, id2, id1, 0], byteorder='little')
                 code_insides = f"{OcarinaControlCode.BACKGROUND.name}:{background_id}"
             
