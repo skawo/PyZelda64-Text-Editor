@@ -112,12 +112,20 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         for message in messageList:
             self.messageTable.insertRow(self.messageTable.rowCount()) 
-            id = QtWidgets.QTableWidgetItem('0x' + format(message.messageId & 0xffff, '04X'))
-            text = QtWidgets.QTableWidgetItem(message.textData)
-            self.messageTable.setItem(self.messageTable.rowCount()-1, 0, id)
-            self.messageTable.setItem(self.messageTable.rowCount()-1, 1, text)
+            self.UpdateRow(self.messageTable.rowCount()-1, message.messageId, message.textData)
 
         self.messageTable.itemSelectionChanged.connect(self.messageTableItemChanged)
+        self.messageTable.selectRow(0)
+
+    def UpdateRow(self, index, messageId, messageText):
+        id = QtWidgets.QTableWidgetItem('0x' + format(messageId & 0xffff, '04X'))
+        text = QtWidgets.QTableWidgetItem(messageText)
+
+        self.messageTable.setItem(index, 0, id)
+        self.messageTable.setItem(index, 1, text)
+
+    def UpdateCurrentRow(self):
+        self.UpdateRow(self.messageTable.selectedIndexes()[0].row(), self.curMessage.messageId, self.curMessage.textData)
 
     def GetCurrentMessage(self):
         msgId = int(self.messageTable.selectedItems()[0].text(), 16) & 0xFFFF
@@ -129,11 +137,29 @@ class TextEditorWidget(QtWidgets.QWidget):
         return None
 
     def messageTableItemChanged(self):
+
+        self.messageEditor.textChanged.disconnect
+        self.boxPositionCombo.currentTextChanged.disconnect
+        self.boxTypeCombo.currentTextChanged.disconnect
+
         self.curMessage = self.GetCurrentMessage()
         self.messageEditor.setPlainText(self.curMessage.textData)
         self.boxPositionCombo.setCurrentText(TextboxPosition(self.curMessage.boxPosition).name)
         self.boxTypeCombo.setCurrentText(OcarinaTextboxType(self.curMessage.boxType).name)
 
+        self.messageEditor.textChanged.connect(self.MessageTextChanged)
+        self.boxTypeCombo.currentTextChanged.connect(self.BoxTypeChanged)
+        self.boxPositionCombo.currentTextChanged.connect(self.BoxPositionChanged)
+
+    def MessageTextChanged(self):
+        self.curMessage.textData = self.messageEditor.toPlainText()
+        self.UpdateCurrentRow()
+
+    def BoxTypeChanged(self):
+        self.curMessage.boxType = OcarinaTextboxType[self.boxTypeCombo.currentText()]
+
+    def BoxPositionChanged(self):
+        self.curMessage.boxPosition = TextboxPosition[self.boxPositionCombo.currentText()]
 
 
 
