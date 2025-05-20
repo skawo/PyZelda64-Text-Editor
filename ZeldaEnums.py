@@ -1,6 +1,12 @@
 from enum import IntEnum
 
 MAX_MES_SIZE = 1280
+SAVE_TABLE_FILENAME = "message_data_static_NES.tbl"
+SAVE_STRINGS_FILENAME = "message_data_static_NES.bin"
+
+class DestinationMode(IntEnum):
+    Files = 0
+    ROM = 1
 
 class MessageMode(IntEnum):
     Ocarina = 0

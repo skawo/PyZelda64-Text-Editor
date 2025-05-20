@@ -1,7 +1,9 @@
 import sys
+import os
 import TextEditorWidget
 import ZeldaMessage
 
+from ZeldaEnums import *
 from PyQt6 import QtGui, QtWidgets
 
 class MainEditorWindow(QtWidgets.QMainWindow):
@@ -21,47 +23,49 @@ class MainEditorWindow(QtWidgets.QMainWindow):
         openSeparateAction = QtGui.QAction('&Open separate files...', self)
         openSeparateAction.triggered.connect(self.HandleOpenFiles)
 
-        saveAction = QtGui.QAction('&Save', self)
-        saveAction.triggered.connect(self.HandleSave)
+        self.saveAction = QtGui.QAction('&Save', self)
+        self.saveAction.triggered.connect(self.HandleSave)
         
-        saveAsAction = QtGui.QAction('&Save as...', self)
-        saveAsAction.triggered.connect(self.HandleSaveAs)
+        self.saveAsAction = QtGui.QAction('&Save as...', self)
+        self.saveAsAction.triggered.connect(self.HandleSaveAs)
 
-        saveAsSeparateAction = QtGui.QAction('&Save to separate files...', self)
-        saveAsSeparateAction.triggered.connect(self.HandleSaveAsSeparate)
+        self.saveAsSeparateAction = QtGui.QAction('&Save to separate files...', self)
+        self.saveAsSeparateAction.triggered.connect(self.HandleSaveAsSeparate)
         
         exitAction = QtGui.QAction('&Exit', self)
         exitAction.triggered.connect(self.HandleCloseApplication)
 
         fileMenu.addAction(openAction)
         fileMenu.addAction(openSeparateAction)
-        fileMenu.addAction(saveAction)
-        fileMenu.addAction(saveAsAction)
-        fileMenu.addAction(saveAsSeparateAction)
+        fileMenu.addSeparator()
+        fileMenu.addAction(self.saveAction)
+        fileMenu.addAction(self.saveAsAction)
+        fileMenu.addAction(self.saveAsSeparateAction)
+        fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
 
         toolsMenu = mainMenu.addMenu('&Tools')
 
-        reSortAction = QtGui.QAction('&Re-sort entries', self)
-        reSortAction.triggered.connect(self.HandleResort)
+        self.reSortAction = QtGui.QAction('&Re-sort entries', self)
+        self.reSortAction.triggered.connect(self.HandleResort)
 
-        importDataAction = QtGui.QAction('&Import data', self)
-        importDataAction.triggered.connect(self.HandleImport)
+        self.importDataAction = QtGui.QAction('&Import data', self)
+        self.importDataAction.triggered.connect(self.HandleImport)
 
-        removeEmptyAction = QtGui.QAction('&Remove empty entries', self)
-        removeEmptyAction.triggered.connect(self.HandleRemoveEmpty)
+        self.removeEmptyAction = QtGui.QAction('&Remove empty entries', self)
+        self.removeEmptyAction.triggered.connect(self.HandleRemoveEmpty)
 
-        exportToJSONAction = QtGui.QAction('&Export to JSON...', self)
-        exportToJSONAction.triggered.connect(self.HandleExportJSON)        
+        self.exportToJSONAction = QtGui.QAction('&Export to JSON...', self)
+        self.exportToJSONAction.triggered.connect(self.HandleExportJSON)        
 
-        importFromJSONAction = QtGui.QAction('&Insert from JSON...', self)
-        importFromJSONAction.triggered.connect(self.HandleImportJSON) 
+        self.importFromJSONAction = QtGui.QAction('&Insert from JSON...', self)
+        self.importFromJSONAction.triggered.connect(self.HandleImportJSON) 
 
-        toolsMenu.addAction(reSortAction)
-        toolsMenu.addAction(importDataAction)
-        toolsMenu.addAction(removeEmptyAction)
-        toolsMenu.addAction(exportToJSONAction)
-        toolsMenu.addAction(importFromJSONAction)
+        toolsMenu.addAction(self.reSortAction)
+        toolsMenu.addAction(self.importDataAction)
+        toolsMenu.addAction(self.removeEmptyAction)
+        toolsMenu.addAction(self.exportToJSONAction)
+        toolsMenu.addAction(self.importFromJSONAction)
 
         aboutMenu = mainMenu.addMenu('&Help')
         
@@ -69,6 +73,8 @@ class MainEditorWindow(QtWidgets.QMainWindow):
         aboutAction.triggered.connect(self.HandleAbout)      
     
         aboutMenu.addAction(aboutAction)
+
+        self.__ChangeStatusBarEnableStatus(False)
 
     def __init__(self):
         super(MainEditorWindow, self).__init__()
@@ -86,15 +92,36 @@ class MainEditorWindow(QtWidgets.QMainWindow):
         if self.UnsavedChanges():
             sys.exit()
 
-    def HandleSave(self):
-        self.messageEditor.SaveCurTextboxDebug()
-        return
-        
-    def HandleAbout(self):
-        QtWidgets.QMessageBox.information(self, 'About', 'Zelda 64 Text Editor v. 0.1 by Skawo')
+    def __GetDataToSave(self):
+        return ZeldaMessage.ConvertMessageList(self.messageEditor.messageList, self.messageEditor.messageMode)
 
+    def __SaveFiles(self, path1, path2):
+        records, strings = self.__GetDataToSave()
+
+        with open(path1, 'wb') as f:
+            f.write(records)
+
+        with open(path2, 'wb') as f:
+            f.write(strings)        
+
+    def HandleSave(self):
+        #if self.destPath2 is None, then assume we're saving to ROM.
+        if self.destPath2 is not None:
+            self.__SaveFiles(self.destPath1, self.destPath2)
+        
     def HandleSaveAs(self):
-        return
+        if self.destPath2 is not None:
+            self.HandleSaveAsSeparate()
+    
+    def HandleSaveAsSeparate(self):
+        folderPath = QtWidgets.QFileDialog.getExistingDirectory(self, 
+                                                                'Choose directory...', "", 
+                                                                QtWidgets.QFileDialog.Option.ShowDirsOnly | QtWidgets.QFileDialog.Option.DontResolveSymlinks);
+        if folderPath == '': return
+        else:     
+            path1 = os.path.join(folderPath, f"{SAVE_TABLE_FILENAME}.tbl")
+            path2 = os.path.join(folderPath, f"{SAVE_STRINGS_FILENAME}.tbl")
+            self.__SaveFiles(path1, path2)      
 
     def HandleOpenROM(self):
         if self.UnsavedChanges():
@@ -138,16 +165,31 @@ class MainEditorWindow(QtWidgets.QMainWindow):
                     tableData = tableFile.read()
                     stringData = stringFile.read()
 
-                    messageList = ZeldaMessage.GetMessageList(tableData, stringData, mode)
+                    self.destPath1 = tableFileName
+                    self.destPath2 = stringFileName
 
+                    messageList = ZeldaMessage.GetMessageList(tableData, stringData, mode)
+                    
                     if (messageList is None):
                         QtWidgets.QMessageBox.information(self, 'Error', 'An error occurred while parsing the data.')
                     else:
+                        self.__ChangeStatusBarEnableStatus(True)
                         self.messageEditor.PopulateEditor(messageList, mode)
         return
+    
+    def __ChangeStatusBarEnableStatus(self, set):
 
-    def HandleSaveAsSeparate(self):
-        return
+        toEnable = [self.reSortAction, 
+                    self.importDataAction, 
+                    self.removeEmptyAction,
+                    self.exportToJSONAction,
+                    self.importFromJSONAction,
+                    self.saveAction,
+                    self.saveAsAction,
+                    self.saveAsSeparateAction]      
+
+        for wid in toEnable:
+            wid.setEnabled(set) 
 
     def HandleResort(self):
         return
@@ -180,6 +222,10 @@ class MainEditorWindow(QtWidgets.QMainWindow):
                 return True
         else:
             return True
+        
+    def HandleAbout(self):
+        QtWidgets.QMessageBox.information(self, 'About', 'Zelda 64 Text Editor v. 0.1 by Skawo')
+
 
 def main():
     global app, mainwindow

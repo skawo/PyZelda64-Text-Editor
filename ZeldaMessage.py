@@ -17,7 +17,7 @@ def GetMessageList(tableData, stringData, mode):
                 break
                 
             file.seek(-2, 1)
-            record = TableRecord(file)
+            record = TableRecord(file, mode)
             
             if any(x.messageId == record.messageId for x in messageRecordList):
                 return None
@@ -41,12 +41,64 @@ def GetMessageList(tableData, stringData, mode):
 
     return messageList
 
+def ConvertMessageList(messagelist, mode):
+    records = []
+    strings = []
+    padding = 0
+
+    offset = 0x08000000 if mode == MessageMode.Majora else 0x07000000
+
+    for mes in messagelist:
+
+        if mode == MessageMode.Majora:
+            return (None, None)
+        else:
+            typePos = mes.boxType
+            typePos <<= 4
+            typePos |= mes.boxPosition
+
+            records.append(mes.messageId.to_bytes(2, 'big'))
+            records.append(typePos.to_bytes(1, 'big'))
+            records.append(padding.to_bytes(1, 'big'))
+            records.append(offset.to_bytes(4, 'big'))
+
+            stringD = bytes(mes.ConvertToBytes())
+            total_length = len(stringD)
+            padding_needed = (4 - (total_length % 4)) % 4
+        
+            if padding_needed > 0:
+                stringD = stringD + bytes([0] * padding_needed)
+            
+            strings.append(stringD)
+            offset += total_length + padding_needed
+
+    records.append(bytes([0xFF] * 2))
+    records.append(bytes([0] * 6))
+
+    # Pad strings to be divisible by 16
+    total_strings_length = sum(len(string) for string in strings)
+    strings_padding_needed = (16 - (total_strings_length % 16)) % 16
+    if strings_padding_needed > 0:
+        strings.append(bytes([0] * strings_padding_needed))
+
+    return (b''.join(records), b''.join(strings))
+
+
 def FormatMessageID(messageId):
     return '0x' + format(messageId & 0xFFFF, '04X')
 
 class TableRecord:
-    def __init__(self, reader):
+    def __init__(self, reader, mode):
 
+        self.mode = mode
+
+        if reader is None:
+            self.messageId = 0
+            self.boxType = 0
+            self.boxPosition = 0
+            self.offset = 0
+            return
+            
         self.messageId = struct.unpack('>h', reader.read(2))[0] & 0xFFFF
         
         typePos = reader.read(1)[0]
@@ -57,9 +109,10 @@ class TableRecord:
         reader.read(1)
         self.offset = struct.unpack('>I', reader.read(4))[0] & 0x00FFFFFF
 
-
 class Message:
     def __init__(self, reader, record, mode):
+
+        self.mode = mode
 
         if reader is None or record is None:
             self.messageId = 0
@@ -75,7 +128,6 @@ class Message:
             return
 
         self.reader = reader
-        self.mode = mode
 
         if mode == MessageMode.Majora:
             self.messageId = record.messageId & 0xFFFF
@@ -237,7 +289,11 @@ class Message:
             
             elif code == OcarinaControlCode.HIGH_SCORE:
                 score_id = self.__get_byte()
-                code_insides = f"{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore(score_id).name if hasattr(OcarinaHighScore, str(score_id)) else str(score_id)}"
+
+                try: score_name = OcarinaHighScore(score_id).name
+                except: score_name = str(score_id)
+
+                code_insides = f"{OcarinaControlCode.HIGH_SCORE.name}:{score_name}"
             
             elif code == OcarinaControlCode.JUMP:
                 msg_id = self.__get_halfword()
@@ -356,7 +412,7 @@ class Message:
                 output.append(OcarinaControlCode.JUMP.value)
                 jump_id = int(code[1], 16)  # Parse hex number
                 jump_bytes = struct.pack(">H", jump_id)  # Big endian short
-                output.extend([jump_bytes[1], jump_bytes[0]])
+                output.extend([jump_bytes[0], jump_bytes[1]])
                 
             elif code[0] in ["DELAY", "FADE", "SHIFT", "SPEED"]:
                 output.append(OcarinaControlCode[code[0]].value)
@@ -366,7 +422,7 @@ class Message:
                 output.append(OcarinaControlCode[code[0]].value)
                 fade_amount = int(code[1])
                 fade_bytes = struct.pack(">h", fade_amount)  # Big endian short
-                output.extend([fade_bytes[1], fade_bytes[0]])
+                output.extend([fade_bytes[0], fade_bytes[1]])
                 
             elif code[0] == "ICON":
                 output.append(OcarinaControlCode[code[0]].value)
@@ -376,7 +432,7 @@ class Message:
                 output.append(OcarinaControlCode.BACKGROUND.value)
                 background_id = int(code[1])
                 background_bytes = struct.pack(">I", background_id)  # Big endian int
-                output.extend([background_bytes[2], background_bytes[1], background_bytes[0]])
+                output.extend([background_bytes[1], background_bytes[2], background_bytes[3]])
                 
             elif code[0] == "HIGH_SCORE":
                 output.append(OcarinaControlCode.HIGH_SCORE.value)
@@ -393,7 +449,7 @@ class Message:
                     sound_value = 0
                 
                 sound_bytes = struct.pack(">h", sound_value)  # Big endian short
-                output.extend([sound_bytes[1], sound_bytes[0]])
+                output.extend([sound_bytes[0], sound_bytes[1]])
                 
             else:
                 try:

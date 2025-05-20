@@ -2,6 +2,7 @@ import ZeldaMessage
 
 from ZeldaEnums import *
 from PyQt6 import  QtGui, QtWidgets
+from PyQt6.QtCore import Qt
 
 class TextEditorWidget(QtWidgets.QWidget):
 
@@ -18,6 +19,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         self.searchField = QtWidgets.QLineEdit()
         self.searchField.setPlaceholderText("Type to search...")
+        self.searchField.textChanged.connect(self.SearchFieldChanged)
 
         self.messageTable = QtWidgets.QTableWidget()
         self.messageTable.setColumnCount(2)
@@ -290,9 +292,15 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.messageList.remove(self.curMessage)
             self.messageTable.removeRow(index)
 
-    def SaveCurTextboxDebug(self):
+    def SearchFieldChanged(self):
 
-        with open('out', 'wb') as f:
-            for i in range(len(self.messageList)):
-                data = self.messageList[i].ConvertToBytes()
-                f.write(bytes(data))
+        for index, item in enumerate(self.messageList): 
+            self.messageTable.hideRow(index)
+
+        text = self.searchField.text()
+
+        matching = self.messageTable.findItems(self.searchField.text(), Qt.MatchFlag.MatchContains)
+
+        for item in matching:
+            index = self.messageTable.indexFromItem(item)
+            self.messageTable.showRow(index.row())
