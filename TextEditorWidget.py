@@ -8,6 +8,8 @@ class TextEditorWidget(QtWidgets.QWidget):
     def __init__(self, parent):
         super(TextEditorWidget, self).__init__(parent)
 
+        self.messageList = None
+
         mainLayout = QtWidgets.QGridLayout()
 
         # --------------- Message Grid
@@ -34,8 +36,13 @@ class TextEditorWidget(QtWidgets.QWidget):
         buttonsGrid = QtWidgets.QHBoxLayout() 
 
         buttonAdd = QtWidgets.QPushButton("Add", self)
+        buttonAdd.clicked.connect(self.AddMessageClicked)
+
         changeID = QtWidgets.QPushButton("Change ID", self)
+        changeID.clicked.connect(self.ChangeIDClicked)
+
         buttonRemove = QtWidgets.QPushButton("Remove", self)
+        buttonRemove.clicked.connect(self.RemoveClicked)
 
         buttonsGrid.addWidget(buttonAdd)
         buttonsGrid.addWidget(changeID)
@@ -169,29 +176,35 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.messageTable.removeRow(0)
 
         for message in messageList:
-            self.messageTable.insertRow(self.messageTable.rowCount()) 
-            self.UpdateRow(self.messageTable.rowCount()-1, message.messageId, message.textData)
+            self.AddMsgRow(self.messageTable.rowCount(), message.messageId, message.textData)
 
         self.messageTable.blockSignals(False)
         self.messageTable.selectRow(0)
 
+    def AddMsgRow(self, index, messageId, messageText):
+        self.messageTable.insertRow(index) 
+        self.UpdateMsgRow(index, messageId, messageText)    
 
-    def UpdateRow(self, index, messageId, messageText):
+    def UpdateMsgRow(self, index, messageId, messageText):
         id = QtWidgets.QTableWidgetItem(ZeldaMessage.FormatMessageID(messageId))
         text = QtWidgets.QTableWidgetItem(messageText)
 
         self.messageTable.setItem(index, 0, id)
         self.messageTable.setItem(index, 1, text)
 
-    def UpdateCurrentRow(self):
-        self.UpdateRow(self.messageTable.selectedIndexes()[0].row(), self.curMessage.messageId, self.curMessage.textData)
+    def UpdateCurrentMsgRow(self):
+        self.UpdateMsgRow(self.messageTable.selectedIndexes()[0].row(), self.curMessage.messageId, self.curMessage.textData)
 
+    def GetMessageById(self, id):
+        for index, item in enumerate(self.messageList): 
+            if item.messageId == id:
+                return item
+            
+        return None
+    
     def GetCurrentMessage(self):
         msgId = int(self.messageTable.selectedItems()[0].text(), 16) & 0xFFFF
-
-        for index, item in enumerate(self.messageList): 
-            if item.messageId == msgId:
-                return item
+        return self.GetMessageById(msgId)
 
     def messageTableItemChanged(self):
         self.messageEditor.blockSignals(True)
@@ -219,7 +232,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
     def MessageTextChanged(self):
         self.curMessage.textData = self.messageEditor.toPlainText()
-        self.UpdateCurrentRow()
+        self.UpdateCurrentMsgRow()
 
     def BoxTypeChanged(self):
         if self.messageMode == MessageMode.Majora:
@@ -230,6 +243,49 @@ class TextEditorWidget(QtWidgets.QWidget):
     def BoxPositionChanged(self):
         self.curMessage.boxPosition = TextboxPosition[self.boxPositionCombo.currentText()]
 
+    def AddMessageClicked(self):
+        if self.messageList is not None:
+            input, done = QtWidgets.QInputDialog.getText(self, ' ', 'New Message ID (hex):')
+
+            if done is False:
+                return
+
+            try:
+                id = int(input, 16)
+                msg = self.GetMessageById(id)
+                if msg is not None:
+                    QtWidgets.QMessageBox.information(self, 'Error', 'Message ID already exists.')
+                else:
+                    self.AddMsgRow(self.messageTable.rowCount() - 1, id, "")     
+                    message = ZeldaMessage.Message(None, None, self.messageMode)
+                    message.messageId = id
+                    self.messageList.append(message)  
+                    self.messageTable.selectRow(self.messageTable.rowCount() - 1)    
+
+            except:
+                QtWidgets.QMessageBox.information(self, 'Error', 'Invalid message ID.')
 
 
+    def ChangeIDClicked(self):
+        if self.messageList is not None:
+            input, done = QtWidgets.QInputDialog.getText(self, ' ', 'New Message ID (hex):')
 
+            if done is False:
+                return
+            
+            try:
+                id = int(input, 16)
+                msg = self.GetMessageById(id)
+                if msg is not None:
+                    QtWidgets.QMessageBox.information(self, 'Error', 'Message ID already exists.')  
+                else:
+                    self.curMessage.messageId = id 
+                    self.UpdateCurrentMsgRow()             
+            except:
+                QtWidgets.QMessageBox.information(self, 'Error', 'Invalid message ID.')        
+
+    def RemoveClicked(self):
+        if self.messageList is not None:
+            index = self.messageTable.selectedIndexes()[0].row()
+            self.messageList.remove(self.curMessage)
+            self.messageTable.removeRow(index)

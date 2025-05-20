@@ -60,16 +60,23 @@ class TableRecord:
 class Message:
     def __init__(self, reader, record, mode):
 
+        if reader is None or record is None:
+            self.messageId = 0
+            self.boxType = 0
+            self.boxPosition = 0
+            self.textData = ""
+
+            if mode == MessageMode.Majora:
+                self.majoraIcon = 0
+                self.majoraJumpTo = 0
+                self.majoraFirstPrice = 0
+                self.majoraSecondPrice = 0
+            return
+
         self.reader = reader
         self.mode = mode
 
-        if mode == MessageMode.Ocarina or mode == MessageMode.Credits:
-            self.messageId = record.messageId & 0xFFFF
-            self.boxType = record.boxType
-            self.boxPosition = record.boxPosition
-
-            self.textData = self.__GetStringData()
-        else:
+        if mode == MessageMode.Majora:
             self.messageId = record.messageId & 0xFFFF
             self.boxType = self.__get_byte()
             self.boxPosition = self.__get_byte() 
@@ -78,8 +85,12 @@ class Message:
             self.majoraFirstPrice = self.__get_halfword()
             self.majoraSecondPrice = self.__get_halfword()
             self.__get_halfword() # Padding
+        else:
+            self.messageId = record.messageId & 0xFFFF
+            self.boxType = record.boxType
+            self.boxPosition = record.boxPosition
 
-            self.textData = self.__GetStringData()
+        self.textData = self.__GetStringData()
 
     def __get_byte(self):
         return int.from_bytes(self.reader.read(1))
