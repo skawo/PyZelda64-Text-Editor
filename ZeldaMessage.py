@@ -190,7 +190,11 @@ class Message:
             
             elif code == OcarinaControlCode.ICON:
                 icon_id = self.get_byte()
-                code_insides = f"{OcarinaControlCode.ICON.name}:{OcarinaIcon(icon_id).name if hasattr(OcarinaIcon, str(icon_id)) else str(icon_id)}"
+
+                try: icon_name = OcarinaIcon(icon_id).name
+                except: icon_name = str(icon_id)
+
+                code_insides = f"{OcarinaControlCode.ICON.name}:{icon_name}"
             
             elif code == OcarinaControlCode.LINE_BREAK:
                 return list("\n")
@@ -212,7 +216,7 @@ class Message:
                 code_insides = f"{OcarinaControlCode.FADE2.name}:{num_frames_fade2}"
             
             elif code == OcarinaControlCode.SOUND:
-                sound_id = self.get_byte()
+                sound_id = self.get_halfword()
                 code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
             
             elif code == OcarinaControlCode.SPEED:
