@@ -97,10 +97,12 @@ class Message:
         controlCodeType = MajoraControlCode if self.mode == MessageMode.Majora else OcarinaControlCode
         func = self.GetControlCodeMajora if self.mode == MessageMode.Majora else self.GetControlCode
 
+        boundByte = 0xAF if self.mode == MessageMode.Majora else 0x9E
+
         while cur_byte != controlCodeType.END:
             read_control_code = False
 
-            if cur_byte < 0x7F or cur_byte > 0x9E:
+            if cur_byte < 0x7F or cur_byte > boundByte:
                 if (cur_byte in controlCodeType):
                     char_data.extend(func(controlCodeType(cur_byte)))
                     read_control_code = True
@@ -110,7 +112,7 @@ class Message:
                     # Never actually used in-game. Appears blank.
                     char_data.append(' ')
                 # Stressed characters
-                elif 0x80 <= cur_byte <= 0x9E:
+                elif 0x80 <= cur_byte <= boundByte:
                     char_data.append(controlCodeType(cur_byte).name[0])
                 # ASCII-mapped characters
                 elif ((0x20 <= cur_byte < 0x7F) or 
@@ -153,10 +155,10 @@ class Message:
             return list("\n")
 
         elif code == MajoraControlCode.NEW_BOX:
-            return list(f"\n<{MajoraControlCode.NEW_BOX}>\n")
+            return list(f"\n<{MajoraControlCode.NEW_BOX.name}>\n")
 
         elif code == MajoraControlCode.NEW_BOX_CENTER:
-            return list(f"\n<{MajoraControlCode.NEW_BOX_CENTER}>\n")
+            return list(f"\n<{MajoraControlCode.NEW_BOX_CENTER.name}>\n")
 
         elif code in [
             MajoraControlCode.DELAY,
@@ -165,11 +167,11 @@ class Message:
             MajoraControlCode.FADE
         ]:
             delay = self.get_halfword()
-            code_insides = f"{code}:{delay}"
+            code_insides = f"{code.name}:{delay}"
 
         elif code == MajoraControlCode.SOUND:
             sound_id = self.get_halfword()
-            code_insides = f"{OcarinaControlCode.SOUND}:{sound_id}"
+            code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
 
         else:
             code_insides = code.name
