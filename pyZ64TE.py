@@ -2,7 +2,7 @@ import sys
 import TextEditorWidget
 import ZeldaMessage
 
-from PyQt6 import QtCore, QtGui, QtWidgets
+from PyQt6 import QtGui, QtWidgets
 
 class MainEditorWindow(QtWidgets.QMainWindow):
 
@@ -87,6 +87,7 @@ class MainEditorWindow(QtWidgets.QMainWindow):
             sys.exit()
 
     def HandleSave(self):
+        self.messageEditor.SaveCurTextboxDebug()
         return
         
     def HandleAbout(self):

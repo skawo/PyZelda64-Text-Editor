@@ -2,6 +2,7 @@ import struct
 import string
 
 from ZeldaEnums import *
+from PyQt6 import QtGui, QtWidgets
 from io import BytesIO
 
 def GetMessageList(tableData, stringData, mode):
@@ -106,7 +107,7 @@ class Message:
         cur_byte = self.__get_byte()
 
         controlCodeType = MajoraControlCode if self.mode == MessageMode.Majora else OcarinaControlCode
-        func = self.GetControlCodeMajora if self.mode == MessageMode.Majora else self.GetControlCode
+        func = self.__GetControlCodeMajora if self.mode == MessageMode.Majora else self.__GetControlCode
 
         boundByte = 0xAF if self.mode == MessageMode.Majora else 0x9E
 
@@ -141,7 +142,7 @@ class Message:
 
         return ''.join(char_data)
     
-    def GetControlCodeMajora(self, code):
+    def __GetControlCodeMajora(self, code):
         code_bank = []
         code_insides = ""
 
@@ -190,7 +191,7 @@ class Message:
         code_bank.extend(f"<{code_insides}>")
         return code_bank
 
-    def GetControlCode(self, code):
+    def __GetControlCode(self, code):
         code_bank = []
         code_insides = ""
 
@@ -260,3 +261,153 @@ class Message:
 
         code_bank.extend(f"<{code_insides}>")
         return code_bank       
+    
+    def ConvertToBytes(self):
+        return self.__ConvertToBytesMajora() if self.mode == MessageMode.Majora else self.__ConvertToBytesOcarina()
+    
+    def __ConvertToBytesMajora(self):
+        return []
+
+    def __ConvertToBytesOcarina(self):
+        data = []
+        self.errors = []
+        
+        i = 0
+        while i < len(self.textData):
+            # Not a control code, copy char to output buffer
+            if self.textData[i] != '<' and self.textData[i] != '>':
+                try:
+                    # Check if character is a valid control code
+                    control_code = OcarinaControlCode[self.textData[i]]
+                    data.append(control_code.value)
+                except:
+                    if self.textData[i] == '\n':
+                        data.append(OcarinaControlCode.LINE_BREAK.value)
+                    elif self.textData[i] == '\r':
+                        # Do nothing
+                        pass
+                    else:
+                        data.append(ord(self.textData[i]))
+                
+                i += 1
+                continue
+                
+            # Control code end tag. This should never be encountered on its own.
+            elif self.textData[i] == '>':
+                self.errors.append("Message formatting is not valid: found stray >")
+                i += 1
+            # We've got a control code
+            else:
+                # Buffer for the control code
+                control_code = []
+                
+                while i < len(self.textData) - 1 and self.textData[i] != '>':
+                    # Add code chars to the buffer
+                    control_code.append(self.textData[i])
+                    # Increase i so we can skip the code when we're done parsing
+                    i += 1
+                    
+                if not control_code:
+                    i += 1
+                    continue
+                    
+                # Remove the < chevron from the beginning of the code
+                control_code.pop(0)
+                
+                parsed_code = ''.join(control_code)
+                parsed_fixed = parsed_code.split(':')[0].replace(" ", "_").upper()
+                
+                if parsed_fixed in (OcarinaControlCode.NEW_BOX.name, OcarinaControlCode.DELAY.name):
+                    if data and data[-1] == 0x01:
+                        data.pop()
+                        
+                    if len(self.textData) > i + len('\n'):
+                        if len('\n') == 2:  # Windows-style newline
+                            s = self.textData[i + 1:i + 3]
+                        else:
+                            s = self.textData[i + 1]
+                            
+                        if s == '\n':
+                            i += len('\n')  # Skips next linebreak
+                
+                control_code_bytes = self.ConvertControlCode(parsed_code.split(':'), self.errors)
+                data.extend(control_code_bytes)
+                i += 1
+                
+        data.append(OcarinaControlCode.END.value)
+        
+        #if show_errors and self.errors:
+        #    QtWidgets.QMessageBox.information(self, 'Error', f"Errors parsing message {self.messageId}:\n" + "\n".join(errors))
+        
+        return data if not self.errors else []
+
+    def __ConvertControlCodeOcarina(self, code, errors):
+        output = []
+        
+        try:
+            # Convert all codes to uppercase and replace spaces with underscores
+            code = [c.replace(" ", "_").upper() for c in code]
+            
+            if code[0] == "PIXELS_RIGHT":
+                output.append(OcarinaControlCode.SHIFT.value)
+                output.append(int(code[1]))
+                
+            elif code[0] == "JUMP":
+                output.append(OcarinaControlCode.JUMP.value)
+                jump_id = int(code[1], 16)  # Parse hex number
+                jump_bytes = struct.pack(">H", jump_id)  # Big endian short
+                output.extend([jump_bytes[1], jump_bytes[0]])
+                
+            elif code[0] in ["DELAY", "FADE", "SHIFT", "SPEED"]:
+                output.append(OcarinaControlCode[code[0]].value)
+                output.append(int(code[1]))
+                
+            elif code[0] == "FADE2":
+                output.append(OcarinaControlCode[code[0]].value)
+                fade_amount = int(code[1])
+                fade_bytes = struct.pack(">h", fade_amount)  # Big endian short
+                output.extend([fade_bytes[1], fade_bytes[0]])
+                
+            elif code[0] == "ICON":
+                output.append(OcarinaControlCode[code[0]].value)
+                output.append(OcarinaIcon[code[1]].value)
+                
+            elif code[0] == "BACKGROUND":
+                output.append(OcarinaControlCode.BACKGROUND.value)
+                background_id = int(code[1])
+                background_bytes = struct.pack(">I", background_id)  # Big endian int
+                output.extend([background_bytes[2], background_bytes[1], background_bytes[0]])
+                
+            elif code[0] == "HIGH_SCORE":
+                output.append(OcarinaControlCode.HIGH_SCORE.value)
+                output.append(OcarinaHighScore[code[1]].value)
+                
+            elif code[0] == "SOUND":
+                output.append(OcarinaControlCode.SOUND.value)
+                sound_value = 0
+                
+                try:
+                    sound_value = int(code[1])
+                except ValueError:
+                    errors.append(f"{code[1]} is not a valid sound.")
+                    sound_value = 0
+                
+                sound_bytes = struct.pack(">h", sound_value)  # Big endian short
+                output.extend([sound_bytes[1], sound_bytes[0]])
+                
+            else:
+                try:
+                    color_value = OcarinaMsgColor[code[0]].value
+                    output.append(OcarinaControlCode.COLOR.value)
+                    output.append(color_value)
+                except KeyError:
+                    try:
+                        output.append(OcarinaControlCode[code[0]].value)
+                    except KeyError:
+                        errors.append(f"{code[0]} is not a valid control code.")
+                        
+        except Exception:
+            pass
+            
+        return output
+
