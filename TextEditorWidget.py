@@ -291,6 +291,8 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.messageTable.removeRow(index)
 
     def SaveCurTextboxDebug(self):
-        data = self.curMessage.ConvertToBytes()
+
         with open('out', 'wb') as f:
-            f.write(bytes(data))
+            for i in range(len(self.messageList)):
+                data = self.messageList[i].ConvertToBytes()
+                f.write(bytes(data))

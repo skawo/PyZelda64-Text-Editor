@@ -330,7 +330,7 @@ class Message:
                         if s == '\n':
                             i += len('\n')  # Skips next linebreak
                 
-                control_code_bytes = self.ConvertControlCode(parsed_code.split(':'), self.errors)
+                control_code_bytes = self.__ConvertControlCodeOcarina(parsed_code.split(':'), self.errors)
                 data.extend(control_code_bytes)
                 i += 1
                 
