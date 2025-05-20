@@ -12,6 +12,8 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         mainLayout = QtWidgets.QGridLayout()
 
+        # --------------- Message Grid
+
         messageGridLayout = QtWidgets.QVBoxLayout()
 
         searchField = QtWidgets.QLineEdit()
@@ -31,13 +33,16 @@ class TextEditorWidget(QtWidgets.QWidget):
         messageGridLayout.addWidget(messageTable)
         messageGridLayout.addLayout(buttonsGrid)
 
+        # --------------- Message Edit
+
         messageEditLayout = QtWidgets.QVBoxLayout()
 
-
-
+        messageOptionsFrame = QtWidgets.QFrame()
+        messageOptionsFrame.setLineWidth(1)
+        messageOptionsFrame.setFrameStyle(QtWidgets.QFrame.Shape.StyledPanel)
 
         messageOptionsLayout = QtWidgets.QGridLayout()
-
+        
         boxTypeLabel = QtWidgets.QLabel("Box Type:", self)
         boxPositionLabel = QtWidgets.QLabel("Box Position:", self)
 
@@ -49,44 +54,27 @@ class TextEditorWidget(QtWidgets.QWidget):
         messageOptionsLayout.addWidget(boxPositionLabel, 1, 0)
         messageOptionsLayout.addWidget(boxPositionCombo, 1, 1)
 
-        messageEditLayout.addLayout(messageOptionsLayout)
+        messageOptionsFrame.setLayout(messageOptionsLayout)
+        messageEditLayout.addWidget(messageOptionsFrame)
 
         messageEditor = QtWidgets.QPlainTextEdit()
         messageEditLayout.addWidget(messageEditor)
 
+        # --------------- Message Preview
+
         messagePreviewLayout = QtWidgets.QVBoxLayout()
         messagePreview = QtWidgets.QLabel()
-        messagePreview.setFixedWidth(300)
-
-
+        messagePreview.setFixedWidth(320)
         messagePreviewLayout.addWidget(messagePreview)
 
-
-
-
-
-
-
-
-
-
-
+        # ------------------------------
 
         mainLayout.addLayout(messageGridLayout, 0, 0)
         mainLayout.addLayout(messageEditLayout, 0, 1)
         mainLayout.addLayout(messagePreviewLayout, 0, 2)
 
-
-
-
-    
-
         self.setLayout(mainLayout)
-
-
-
         self.changesMade = False
-
         return
     
     def LoadROM(self):
