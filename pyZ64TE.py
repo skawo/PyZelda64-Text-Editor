@@ -120,7 +120,18 @@ class MainEditorWindow(QtWidgets.QMainWindow):
 
                 if stringFileName == '': return
                 else:
-                    self.messageEditor.LoadFiles(tableFileName, stringFileName)
+                    tableFile = open(tableFileName, "rb")
+                    stringFile = open(stringFileName, "rb")
+
+                    tableData = tableFile.read()
+                    stringData = stringFile.read()
+
+                    messageList = ZeldaMessage.GetMessageList(tableData, stringData)
+
+                    if (messageList is None):
+                        QtWidgets.QMessageBox.information(self, 'Error', 'An error occurred while parsing the data.')
+                    else:
+                        self.messageEditor.PopulateEditor(messageList)
         return
 
     def HandleSaveAsSeparate(self):

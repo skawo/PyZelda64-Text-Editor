@@ -1,11 +1,5 @@
-import sys
-import os
-import struct
-import threading
-import ZeldaMessage
-
-from PyQt6 import QtCore, QtGui, QtWidgets
-from typing import List
+from ZeldaEnums import *
+from PyQt6 import  QtGui, QtWidgets
 
 class TextEditorWidget(QtWidgets.QWidget):
 
@@ -26,7 +20,13 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageTable.setHorizontalHeaderLabels(["ID", "Message"])
         self.messageTable.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.messageTable.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        
+        headerView = self.messageTable.horizontalHeader()
+        headerView.setSectionResizeMode(0, QtWidgets.QHeaderView.ResizeMode.ResizeToContents)
+        headerView.setSectionResizeMode(1, QtWidgets.QHeaderView.ResizeMode.Stretch)
 
+        self.messageTable.verticalHeader().setVisible(False)
+        self.messageTable.setHorizontalHeader(headerView)
 
         buttonsGrid = QtWidgets.QHBoxLayout() 
 
@@ -66,13 +66,20 @@ class TextEditorWidget(QtWidgets.QWidget):
         boxTypeLabel = QtWidgets.QLabel("Box Type:", self)
         boxPositionLabel = QtWidgets.QLabel("Box Position:", self)
 
-        boxTypeCombo = QtWidgets.QComboBox()
-        boxPositionCombo = QtWidgets.QComboBox()
+        self.boxTypeCombo = QtWidgets.QComboBox()
+
+        for type in OcarinaTextboxType:
+            self.boxTypeCombo.addItem(type.name)
+
+        self.boxPositionCombo = QtWidgets.QComboBox()
+
+        for tpos in TextboxPosition:
+            self.boxPositionCombo.addItem(tpos.name)
 
         messageOptionsLayout.addWidget(boxTypeLabel, 0, 0)
-        messageOptionsLayout.addWidget(boxTypeCombo, 0, 1)
+        messageOptionsLayout.addWidget(self.boxTypeCombo, 0, 1)
         messageOptionsLayout.addWidget(boxPositionLabel, 1, 0)
-        messageOptionsLayout.addWidget(boxPositionCombo, 1, 1)
+        messageOptionsLayout.addWidget(self.boxPositionCombo, 1, 1)
 
         messageOptionsFrame.setLayout(messageOptionsLayout)
         messageEditLayout.addWidget(messageOptionsFrame)
@@ -94,35 +101,14 @@ class TextEditorWidget(QtWidgets.QWidget):
         mainLayout.addLayout(messagePreviewLayout, 0, 2)
 
         self.setLayout(mainLayout)
-
         self.changesMade = False
-        self.zm = ZeldaMessage.ZeldaMessage()
 
         return
     
-    def LoadROM(self):
-        return
-
-    def LoadFiles(self, tableFileName, stringFileName):
-        tableFile = open(tableFileName, "rb")
-        stringFile = open(stringFileName, "rb")
-
-        self.tableData = tableFile.read()
-        self.stringData = stringFile.read()
-
-        self.messageList = self.zm.GetMessageList(self.tableData, self.stringData)
-
-        if (self.messageList is None):
-            pass
-        else:
-            self.InsertMessages(self.messageList)
-
-
-        return
-
-    def InsertMessages(self, messageList):
+    def PopulateEditor(self, messageList):
 
         self.messageTable.itemSelectionChanged.disconnect
+        self.messageList = messageList
 
         for message in messageList:
             self.messageTable.insertRow(self.messageTable.rowCount()) 
@@ -133,9 +119,22 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         self.messageTable.itemSelectionChanged.connect(self.messageTableItemChanged)
 
-    def messageTableItemChanged(self):
+    def GetCurrentMessage(self):
+        msgId = int(self.messageTable.selectedItems()[0].text(), 16) & 0xFFFF
 
-        self.messageEditor.setPlainText(self.messageTable.selectedItems()[1].text())
+        for index, item in enumerate(self.messageList): 
+            if item.messageId == msgId:
+                return item
+            
+        return None
+
+    def messageTableItemChanged(self):
+        self.curMessage = self.GetCurrentMessage()
+        self.messageEditor.setPlainText(self.curMessage.textData)
+        self.boxPositionCombo.setCurrentText(TextboxPosition(self.curMessage.boxPosition).name)
+        self.boxTypeCombo.setCurrentText(OcarinaTextboxType(self.curMessage.boxType).name)
+
+
 
 
 
