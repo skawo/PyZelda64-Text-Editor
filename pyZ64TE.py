@@ -1,5 +1,6 @@
 import sys
 import TextEditorWidget
+import ZeldaMessage
 
 from PyQt6 import QtCore, QtGui, QtWidgets
 
@@ -103,6 +104,23 @@ class MainEditorWindow(QtWidgets.QMainWindow):
                 self.messageEditor.LoadROM(fileName)
                 
     def HandleOpenFiles(self):
+        if self.UnsavedChanges():
+            tableFileName = QtWidgets.QFileDialog.getOpenFileName(self, 
+                                                            'Choose the Message Table...', 
+                                                            '', 
+                                                            'Table Data (*.tbl);;All Files(*)')[0]
+
+
+            if tableFileName == '': return
+            else:
+                stringFileName = QtWidgets.QFileDialog.getOpenFileName(self, 
+                                                                'Choose the String Data...', 
+                                                                '', 
+                                                                'String Data (*.bin);;All Files(*)')[0]
+
+                if stringFileName == '': return
+                else:
+                    self.messageEditor.LoadFiles(tableFileName, stringFileName)
         return
 
     def HandleSaveAsSeparate(self):

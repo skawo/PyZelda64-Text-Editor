@@ -1,0 +1,402 @@
+import struct
+import string
+from enum import Enum, IntEnum
+from typing import List
+from io import BytesIO
+from PyQt6 import QtCore, QtGui, QtWidgets
+class ZeldaMessage():
+
+    def GetMessageList(self, tableData, stringData):
+        messageRecordList = []
+        messageList = []
+
+        error = 0
+        
+        with BytesIO(tableData) as file:
+            while True:
+                peek_bytes = file.read(2)
+                if not peek_bytes or struct.unpack('>h', peek_bytes)[0] == -1:
+                    file.seek(-2, 1)
+                    break
+                    
+                file.seek(-2, 1)
+                record = TableRecord(file)
+                
+                if any(x.messageId == record.messageId for x in messageRecordList):
+                    return None
+                    
+                messageRecordList.append(record)
+
+        with BytesIO(stringData) as file:
+            for record in messageRecordList:
+                if record.offset >= len(stringData):      
+                    continue     
+
+                file.seek(record.offset)    
+                start_pos = file.tell()
+
+                message = Message(file, record)
+
+                messageList.append(message)
+
+        return messageList
+
+class TableRecord:
+    def __init__(self, reader):
+
+        self.messageId = struct.unpack('>h', reader.read(2))[0]
+        
+        typePos = reader.read(1)[0]
+        
+        self.boxType = OcarinaTextboxType((typePos & 0xF0) >> 4)
+        self.boxPosition = TextboxPosition(typePos & 0x0F)
+    
+        reader.read(1)
+        self.offset = struct.unpack('>I', reader.read(4))[0] & 0x00FFFFFF
+
+
+class Message:
+    def __init__(self, reader, record):
+        self.messageId = record.messageId
+        self.boxType = record.boxType
+        self.boxPosition = record.boxPosition
+
+        self.textData = self.GetStringData(reader)
+
+    def GetStringData(self, reader):
+        char_data = []
+        cur_byte = int.from_bytes(reader.read(1))
+
+        while cur_byte != OcarinaControlCode.END:
+            read_control_code = False
+
+            if cur_byte < 0x7F or cur_byte > 0x9E:
+                if (cur_byte in OcarinaControlCode):
+                    char_data.extend(self.GetControlCode(OcarinaControlCode(cur_byte), reader))
+                    read_control_code = True
+
+            if not read_control_code:
+                if cur_byte == 0x7F:
+                    # Never actually used in-game. Appears blank.
+                    char_data.append(' ')
+                # Stressed characters
+                elif 0x80 <= cur_byte <= 0x9E:
+                    char_data.append(OcarinaControlCode(cur_byte).name[0])
+                # ASCII-mapped characters
+                elif ((0x20 <= cur_byte < 0x7F) or 
+                    chr(cur_byte).isalnum() or 
+                    chr(cur_byte).isspace() or 
+                    chr(cur_byte) in string.punctuation):
+                    char_data.append(chr(cur_byte))
+                else:
+                    char_data.extend(f"<UNK {cur_byte:X}>")
+
+            if reader.tell() != len(reader.getvalue()):
+                cur_byte = int.from_bytes(reader.read(1))
+            else:
+                cur_byte = 0x02
+
+        return ''.join(char_data)
+
+    def GetControlCode(self, code, reader):
+        code_bank = []
+        code_insides = ""
+
+        if code == OcarinaControlCode.COLOR:
+            color = OcarinaMsgColor(int.from_bytes(reader.read(1)))
+            code_insides = str(color)
+        
+        elif code == OcarinaControlCode.ICON:
+            icon_id = int.from_bytes(reader.read(1))
+            code_insides = f"{OcarinaControlCode.ICON.name}:{OcarinaIcon(icon_id).name if hasattr(OcarinaIcon, str(icon_id)) else str(icon_id)}"
+        
+        elif code == OcarinaControlCode.LINE_BREAK:
+            return list("\n")
+        
+        elif code == OcarinaControlCode.SHIFT:
+            num_spaces = int.from_bytes(reader.read(1))
+            code_insides = f"{OcarinaControlCode.SHIFT.name}:{num_spaces}"
+        
+        elif code == OcarinaControlCode.DELAY:
+            num_frames = int.from_bytes(reader.read(1))
+            code_insides = f"{OcarinaControlCode.DELAY.name}:{num_frames}"
+        
+        elif code == OcarinaControlCode.FADE:
+            num_frames_fade = int.from_bytes(reader.read(1))
+            code_insides = f"{OcarinaControlCode.FADE.name}:{num_frames_fade}"
+        
+        elif code == OcarinaControlCode.FADE2:
+            num_frames_fade2 = struct.unpack('>h', reader.read(2))[0]
+            code_insides = f"{OcarinaControlCode.FADE2.name}:{num_frames_fade2}"
+        
+        elif code == OcarinaControlCode.SOUND:
+            sound_id = int.from_bytes(reader.read(1))
+            code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
+        
+        elif code == OcarinaControlCode.SPEED:
+            speed = int.from_bytes(reader.read(1))
+            code_insides = f"{OcarinaControlCode.SPEED.name}:{speed}"
+        
+        elif code == OcarinaControlCode.HIGH_SCORE:
+            score_id = int.from_bytes(reader.read(1))
+            code_insides = f"{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore(score_id).name if hasattr(OcarinaHighScore, str(score_id)) else str(score_id)}"
+        
+        elif code == OcarinaControlCode.JUMP:
+            msg_id = struct.unpack('>h', reader.read(2))[0]
+            code_insides = f"{OcarinaControlCode.JUMP.name}:{msg_id:04X}"
+        
+        elif code == OcarinaControlCode.NEW_BOX:
+            return list(f"\n<{OcarinaControlCode.NEW_BOX.name}>\n")
+        
+        elif code == OcarinaControlCode.BACKGROUND:
+            id1 = int.from_bytes(reader.read(1))
+            id2 = int.from_bytes(reader.read(1))
+            id3 = int.from_bytes(reader.read(1))
+            background_id = int.from_bytes([id3, id2, id1, 0], byteorder='little')
+            code_insides = f"{OcarinaControlCode.BACKGROUND.name}:{background_id}"
+        
+        else:
+            code_insides = code.name
+
+        code_bank.extend(f"<{code_insides}>")
+        return code_bank       
+
+class OcarinaTextboxType(IntEnum):
+    Black = 0
+    Wooden = 1
+    Blue = 2
+    Ocarina = 3
+    None_White = 4
+    None_Black = 5
+    Credits = 11
+
+class TextboxPosition(IntEnum):
+    Dynamic = 0
+    Top = 1
+    Center = 2
+    Bottom = 3
+
+class OcarinaControlCode(IntEnum):
+    LINE_BREAK = 0x01
+    END = 0x02
+    NEW_BOX = 0x04
+    COLOR = 0x05
+    SHIFT = 0x06
+    JUMP = 0x07
+    DI = 0x08
+    DC = 0x09
+    PERSISTENT = 0x0A
+    EVENT = 0x0B
+    DELAY = 0x0C
+    AWAIT_BUTTON = 0x0D
+    FADE = 0x0E
+    PLAYER = 0x0F
+    OCARINA = 0x10
+    FADE2 = 0x11
+    SOUND = 0x12
+    ICON = 0x13
+    SPEED = 0x14
+    BACKGROUND = 0x15
+    MARATHON_TIME = 0x16
+    RACE_TIME = 0x17
+    POINTS = 0x18
+    GOLD_SKULLTULAS = 0x19
+    NS = 0x1A
+    TWO_CHOICES = 0x1B
+    THREE_CHOICES = 0x1C
+    FISH_WEIGHT = 0x1D
+    HIGH_SCORE = 0x1E
+    TIME = 0x1F
+
+    LCHEVRON = 0x3C
+    RCHEVRON = 0x3E
+
+    DASH = 0x7F
+    À = 0x80
+    Î = 0x81
+    Â = 0x82
+    Ä = 0x83
+    Ç = 0x84
+    È = 0x85
+    É = 0x86
+    Ê = 0x87
+    Ë = 0x88
+    Ï = 0x89
+    Ô = 0x8A
+    Ö = 0x8B
+    Ù = 0x8C
+    Û = 0x8D
+    Ü = 0x8E
+    ß = 0x8F
+    à = 0x90
+    á = 0x91
+    â = 0x92
+    ä = 0x93
+    ç = 0x94
+    è = 0x95
+    é = 0x96
+    ê = 0x97
+    ë = 0x98
+    ï = 0x99
+    ô = 0x9A
+    ö = 0x9B
+    ù = 0x9C
+    û = 0x9D
+    ü = 0x9E
+
+    A_BUTTON = 0x9F
+    B_BUTTON = 0xA0
+    C_BUTTON = 0xA1
+    L_BUTTON = 0xA2
+    R_BUTTON = 0xA3
+    Z_BUTTON = 0xA4
+    C_UP = 0xA5
+    C_DOWN = 0xA6
+    C_LEFT = 0xA7
+    C_RIGHT = 0xA8,
+    TRIANGLE = 0xA9
+    CONTROL_STICK = 0xAA
+    D_PAD = 0xAB
+
+class OcarinaMsgColor(IntEnum):
+    W = 0x40
+    R = 0x41
+    G = 0x42
+    B = 0x43
+    C = 0x44
+    M = 0x45
+    Y = 0x46
+    BLK = 0x47
+
+class OcarinaHighScore(IntEnum):
+    ARCHERY = 0x00
+    POE_POINTS = 0x01
+    FISH_WEIGHT = 0x02
+    HORSE_RACE = 0x03
+    MARATHON = 0x04
+    HS_UNK = 0x05
+    DAMPE_RACE = 0x06
+
+class OcarinaIcon(IntEnum):
+    DEKU_STICK = 0
+    DEKU_NUT = 1
+    BOMBS = 2
+    BOW = 3
+    FIRE_ARROWS = 4
+    DINS_FIRE = 5
+    SLINGSHOT = 6
+    FAIRY_OCARINA = 7
+    OCARINA_OF_TIME = 8
+    BOMBCHUS = 9
+    HOOKSHOT = 10
+    LONGSHOT = 11
+    ICE_ARROWS = 12
+    FARORES_WIND = 13
+    BOOMERANG = 14
+    LENS_OF_TRUTH = 15
+    BEANS = 16
+    MEGATON_HAMMER = 17
+    LIGHT_ARROWS = 18
+    NAYRUS_LOVE = 19
+    EMPTY_BOTTLE = 20
+    RED_POTION = 21
+    GREEN_POTION = 22
+    BLUE_POTION = 23
+    FAIRY = 24
+    FISH = 25
+    MILK = 26
+    RUTOS_LETTER = 27
+    BLUE_FIRE = 28
+    BOTTLE_BUG = 29
+    BOTTLE_POE = 30
+    HALF_MILK = 31
+    BOTTLE_BIGPOE = 32
+    WEIRD_EGG = 33
+    CHICKEN = 34
+    ZELDAS_LETTER = 35
+    KEATON_MASK = 36
+    SKULL_MASK = 37
+    SPOOKY_MASK = 38
+    BUNNY_HOOD = 39
+    GORON_MASK = 40
+    ZORA_MASK = 41
+    GERUDO_MASK = 42
+    MASK_OF_TRUTH = 43
+    SOLD_OUT = 44
+    POCKET_EGG = 45
+    POCKET_CUCCO = 46
+    COJIRO = 47
+    ODD_MUSHROOM = 48
+    ODD_POTION = 49
+    POACHERS_SAW = 50
+    BROKEN_SWORD = 51
+    PRESCRIPTION = 52
+    EYEBALL_FROG = 53
+    EYEDROPS = 54
+    CLAIM_CHECK = 55
+    BOW_FIRE = 56
+    BOW_ICE = 57
+    BOW_LIGHT = 58
+    KOKIRI_SWORD = 59
+    MASTER_SWORD = 60
+    BIGGORON_SWORD = 61
+    DEKU_SHIELD = 62
+    HYLIAN_SHIELD = 63
+    MIRROR_SHIELD = 64
+    KOKIRI_TUNIC = 65
+    GORON_TUNIC = 66
+    ZORA_TUNIC = 67
+    BOOTS = 68
+    IRON_BOOTS = 69
+    HOVER_BOOTS = 70
+    BULLET_BAG = 71
+    BIGGER_BULLET_BAG = 72
+    BIGGEST_BULLET_BAG = 73
+    QUIVER = 74
+    BIG_QUIVER = 75
+    BIGGEST_QUIVER = 76
+    BOMB_BAG = 77
+    BIGGER_BOMB_BAG = 78
+    BIGGEST_BOMB_BAG = 79
+    GORON_BRACELET = 80
+    SILVER_GAUNTLETS = 81
+    GOLDEN_GAUNTLETS = 82
+    ZORA_SCALE = 83
+    GOLDEN_SCALE = 84
+    BROKEN_KNIFE = 85
+    ADULTS_WALLET = 86
+    GIANTS_WALLET = 87
+    DEKU_SEEDS = 88
+    FISHING_ROD = 89
+    NOTHING_1 = 90
+    NOTHING_2 = 91
+    NOTHING_3 = 92
+    NOTHING_4 = 93
+    NOTHING_5 = 94
+    NOTHING_6 = 95
+    NOTHING_7 = 96
+    NOTHING_9 = 97
+    NOTHING_10 = 98
+    NOTHING_11 = 99
+    NOTHING_12 = 100
+    NOTHING_13 = 101
+    FOREST_MEDALLION = 102
+    FIRE_MEDALLION = 103
+    WATER_MEDALLION = 104
+    SPIRIT_MEDALLION = 105
+    SHADOW_MEDALLION = 106
+    LIGHT_MEDALLION = 107
+    KOKIRI_EMERALD = 108
+    GORON_RUBY = 109
+    ZORA_SAPPHIRE = 110
+    STONE_OF_AGONY = 111
+    GERUDO_PASS = 112
+    GOLDEN_SKULLTULA = 113
+    HEART_CONTAINER = 114
+    HEART_PIECE = 115
+    BOSS_KEY = 116
+    COMPASS = 117
+    DUNGEON_MAP = 118
+    SMALL_KEY = 119
+    MAGIC_JAR = 120
+    BIG_MAGIC_JAR = 121

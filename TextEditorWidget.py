@@ -2,8 +2,10 @@ import sys
 import os
 import struct
 import threading
+import ZeldaMessage
 
 from PyQt6 import QtCore, QtGui, QtWidgets
+from typing import List
 
 class TextEditorWidget(QtWidgets.QWidget):
 
@@ -18,7 +20,14 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         searchField = QtWidgets.QLineEdit()
         searchField.setPlaceholderText("Type to search...")
-        messageTable = QtWidgets.QTableView()
+
+        self.messageTable = QtWidgets.QTableWidget()
+        self.messageTable.setColumnCount(2)
+        self.messageTable.setHorizontalHeaderLabels(["ID", "Message"])
+        self.messageTable.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
+        self.messageTable.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+
+
         buttonsGrid = QtWidgets.QHBoxLayout() 
 
         buttonAdd = QtWidgets.QPushButton("Add", self)
@@ -30,16 +39,27 @@ class TextEditorWidget(QtWidgets.QWidget):
         buttonsGrid.addWidget(buttonRemove)
 
         messageGridLayout.addWidget(searchField)
-        messageGridLayout.addWidget(messageTable)
+        messageGridLayout.addWidget(self.messageTable)
         messageGridLayout.addLayout(buttonsGrid)
 
         # --------------- Message Edit
 
         messageEditLayout = QtWidgets.QVBoxLayout()
 
-        messageOptionsFrame = QtWidgets.QFrame()
-        messageOptionsFrame.setLineWidth(1)
-        messageOptionsFrame.setFrameStyle(QtWidgets.QFrame.Shape.StyledPanel)
+        messageOptionsFrame = QtWidgets.QGroupBox("Message Options")
+
+        messageOptionsFrame.setStyleSheet(f"""
+        QGroupBox {{
+            border: 1px solid {messageOptionsFrame.palette().color(QtGui.QPalette.ColorRole.Mid).name()};
+            margin-top: 1ex;
+        }}
+
+        QGroupBox::title {{
+            subcontrol-origin: margin;
+            margin: 0ex 0.5ex;
+            background-color: {messageOptionsFrame.palette().color(QtGui.QPalette.ColorRole.Window).name()};
+        }}
+        """)
 
         messageOptionsLayout = QtWidgets.QGridLayout()
         
@@ -57,8 +77,8 @@ class TextEditorWidget(QtWidgets.QWidget):
         messageOptionsFrame.setLayout(messageOptionsLayout)
         messageEditLayout.addWidget(messageOptionsFrame)
 
-        messageEditor = QtWidgets.QPlainTextEdit()
-        messageEditLayout.addWidget(messageEditor)
+        self.messageEditor = QtWidgets.QPlainTextEdit()
+        messageEditLayout.addWidget(self.messageEditor)
 
         # --------------- Message Preview
 
@@ -74,8 +94,48 @@ class TextEditorWidget(QtWidgets.QWidget):
         mainLayout.addLayout(messagePreviewLayout, 0, 2)
 
         self.setLayout(mainLayout)
+
         self.changesMade = False
+        self.zm = ZeldaMessage.ZeldaMessage()
+
         return
     
     def LoadROM(self):
         return
+
+    def LoadFiles(self, tableFileName, stringFileName):
+        tableFile = open(tableFileName, "rb")
+        stringFile = open(stringFileName, "rb")
+
+        self.tableData = tableFile.read()
+        self.stringData = stringFile.read()
+
+        self.messageList = self.zm.GetMessageList(self.tableData, self.stringData)
+
+        if (self.messageList is None):
+            pass
+        else:
+            self.InsertMessages(self.messageList)
+
+
+        return
+
+    def InsertMessages(self, messageList):
+
+        self.messageTable.itemSelectionChanged.disconnect
+
+        for message in messageList:
+            self.messageTable.insertRow(self.messageTable.rowCount()) 
+            id = QtWidgets.QTableWidgetItem('0x' + format(message.messageId & 0xffff, '04X'))
+            text = QtWidgets.QTableWidgetItem(message.textData)
+            self.messageTable.setItem(self.messageTable.rowCount()-1, 0, id)
+            self.messageTable.setItem(self.messageTable.rowCount()-1, 1, text)
+
+        self.messageTable.itemSelectionChanged.connect(self.messageTableItemChanged)
+
+    def messageTableItemChanged(self):
+
+        self.messageEditor.setPlainText(self.messageTable.selectedItems()[1].text())
+
+
+
