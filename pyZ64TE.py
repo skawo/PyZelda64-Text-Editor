@@ -8,6 +8,8 @@ class MainEditorWindow(QtWidgets.QMainWindow):
 
     def CreateMenuBar(self):
 
+        self.setWindowIcon(QtGui.QIcon('res/z64text.ico'))
+
         self.statusBar()
         mainMenu = self.menuBar()
 
@@ -120,18 +122,27 @@ class MainEditorWindow(QtWidgets.QMainWindow):
 
                 if stringFileName == '': return
                 else:
+                    msgBox = QtWidgets.QMessageBox(self)
+                    msgBox.setWindowTitle(" ")
+                    msgBox.setText("These files are...?")
+                    msgBox.addButton("Ocarina", QtWidgets.QMessageBox.ButtonRole.NoRole)
+                    msgBox.addButton("Majora", QtWidgets.QMessageBox.ButtonRole.NoRole)
+                    msgBox.addButton("Credits", QtWidgets.QMessageBox.ButtonRole.NoRole)
+                    mode = msgBox.exec()
+                    mode -= 2
+
                     tableFile = open(tableFileName, "rb")
                     stringFile = open(stringFileName, "rb")
 
                     tableData = tableFile.read()
                     stringData = stringFile.read()
 
-                    messageList = ZeldaMessage.GetMessageList(tableData, stringData)
+                    messageList = ZeldaMessage.GetMessageList(tableData, stringData, mode)
 
                     if (messageList is None):
                         QtWidgets.QMessageBox.information(self, 'Error', 'An error occurred while parsing the data.')
                     else:
-                        self.messageEditor.PopulateEditor(messageList)
+                        self.messageEditor.PopulateEditor(messageList, mode)
         return
 
     def HandleSaveAsSeparate(self):

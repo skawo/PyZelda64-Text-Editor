@@ -4,7 +4,7 @@ import string
 from ZeldaEnums import *
 from io import BytesIO
 
-def GetMessageList(tableData, stringData):
+def GetMessageList(tableData, stringData, mode):
     messageRecordList = []
     messageList = []
 
@@ -31,7 +31,7 @@ def GetMessageList(tableData, stringData):
             file.seek(record.offset)    
             start_pos = file.tell()
 
-            message = Message(file, record)
+            message = Message(file, record, mode)
 
             if (file.tell() - start_pos > MAX_MES_SIZE):
                 return None
@@ -39,6 +39,9 @@ def GetMessageList(tableData, stringData):
             messageList.append(message)
 
     return messageList
+
+def FormatMessageID(messageId):
+    return '0x' + format(messageId & 0xFFFF, '04X')
 
 class TableRecord:
     def __init__(self, reader):
@@ -55,23 +58,51 @@ class TableRecord:
 
 
 class Message:
-    def __init__(self, reader, record):
-        self.messageId = record.messageId & 0xFFFF
-        self.boxType = record.boxType
-        self.boxPosition = record.boxPosition
+    def __init__(self, reader, record, mode):
 
-        self.textData = self.GetStringData(reader)
+        self.reader = reader
+        self.mode = mode
 
-    def GetStringData(self, reader):
+        if mode == MessageMode.Ocarina or mode == MessageMode.Credits:
+            self.messageId = record.messageId & 0xFFFF
+            self.boxType = record.boxType
+            self.boxPosition = record.boxPosition
+
+            self.textData = self.GetStringData()
+        else:
+            self.messageId = record.messageId & 0xFFFF
+            self.boxType = self.get_byte()
+            self.boxPosition = self.get_byte() 
+            self.majoraIcon = self.get_byte()
+            self.majoraJumpTo = self.get_halfword()
+            self.majoraFirstPrice = self.get_halfword()
+            self.majoraSecondPrice = self.get_halfword()
+            self.get_halfword() # Padding
+
+            self.textData = self.GetStringData()
+
+    def get_byte(self):
+        return int.from_bytes(self.reader.read(1))
+    
+    def get_halfword(self):
+        return struct.unpack('>h', self.reader.read(2))[0]
+    
+    def get_word(self):
+        return struct.unpack('>w', self.reader.read(4))[0]
+
+    def GetStringData(self):
         char_data = []
-        cur_byte = int.from_bytes(reader.read(1))
+        cur_byte = self.get_byte()
 
-        while cur_byte != OcarinaControlCode.END:
+        controlCodeType = MajoraControlCode if self.mode == MessageMode.Majora else OcarinaControlCode
+        func = self.GetControlCodeMajora if self.mode == MessageMode.Majora else self.GetControlCode
+
+        while cur_byte != controlCodeType.END:
             read_control_code = False
 
             if cur_byte < 0x7F or cur_byte > 0x9E:
-                if (cur_byte in OcarinaControlCode):
-                    char_data.extend(self.GetControlCode(OcarinaControlCode(cur_byte), reader))
+                if (cur_byte in controlCodeType):
+                    char_data.extend(func(controlCodeType(cur_byte)))
                     read_control_code = True
 
             if not read_control_code:
@@ -80,7 +111,7 @@ class Message:
                     char_data.append(' ')
                 # Stressed characters
                 elif 0x80 <= cur_byte <= 0x9E:
-                    char_data.append(OcarinaControlCode(cur_byte).name[0])
+                    char_data.append(controlCodeType(cur_byte).name[0])
                 # ASCII-mapped characters
                 elif ((0x20 <= cur_byte < 0x7F) or 
                     chr(cur_byte).isalnum() or 
@@ -90,68 +121,117 @@ class Message:
                 else:
                     char_data.extend(f"<UNK {cur_byte:X}>")
 
-            if reader.tell() != len(reader.getvalue()):
-                cur_byte = int.from_bytes(reader.read(1))
+            if self.reader.tell() != len(self.reader.getvalue()):
+                cur_byte = self.get_byte()
             else:
-                cur_byte = 0x02
+                cur_byte = controlCodeType.END
 
         return ''.join(char_data)
+    
+    def GetControlCodeMajora(self, code):
+        code_bank = []
+        code_insides = ""
 
-    def GetControlCode(self, code, reader):
+        if code in [
+            MajoraControlCode.COLOR_DEFAULT,
+            MajoraControlCode.COLOR_RED,
+            MajoraControlCode.COLOR_GREEN,
+            MajoraControlCode.COLOR_BLUE,
+            MajoraControlCode.COLOR_YELLOW,
+            MajoraControlCode.COLOR_NAVY,
+            MajoraControlCode.COLOR_PINK,
+            MajoraControlCode.COLOR_SILVER,
+            MajoraControlCode.COLOR_ORANGE
+        ]:
+            code_insides = MajoraMsgColor(code.value).name
+
+        elif code == MajoraControlCode.SHIFT:
+            num_spaces = self.get_byte()
+            code_insides = f"{MajoraControlCode.SHIFT}:{num_spaces}"
+
+        elif code == MajoraControlCode.LINE_BREAK:
+            return list("\n")
+
+        elif code == MajoraControlCode.NEW_BOX:
+            return list(f"\n<{MajoraControlCode.NEW_BOX}>\n")
+
+        elif code == MajoraControlCode.NEW_BOX_CENTER:
+            return list(f"\n<{MajoraControlCode.NEW_BOX_CENTER}>\n")
+
+        elif code in [
+            MajoraControlCode.DELAY,
+            MajoraControlCode.DELAY_NEWBOX,
+            MajoraControlCode.DELAY_END,
+            MajoraControlCode.FADE
+        ]:
+            delay = self.get_halfword()
+            code_insides = f"{code}:{delay}"
+
+        elif code == MajoraControlCode.SOUND:
+            sound_id = self.get_halfword()
+            code_insides = f"{OcarinaControlCode.SOUND}:{sound_id}"
+
+        else:
+            code_insides = code.name
+
+        code_bank.extend(f"<{code_insides}>")
+        return code_bank
+
+    def GetControlCode(self, code):
         code_bank = []
         code_insides = ""
 
         try:
             if code == OcarinaControlCode.COLOR:
-                color = OcarinaMsgColor(int.from_bytes(reader.read(1)))
+                color = OcarinaMsgColor(self.get_byte())
                 code_insides = color.name
             
             elif code == OcarinaControlCode.ICON:
-                icon_id = int.from_bytes(reader.read(1))
+                icon_id = self.get_byte()
                 code_insides = f"{OcarinaControlCode.ICON.name}:{OcarinaIcon(icon_id).name if hasattr(OcarinaIcon, str(icon_id)) else str(icon_id)}"
             
             elif code == OcarinaControlCode.LINE_BREAK:
                 return list("\n")
             
             elif code == OcarinaControlCode.SHIFT:
-                num_spaces = int.from_bytes(reader.read(1))
+                num_spaces = self.get_byte()
                 code_insides = f"{OcarinaControlCode.SHIFT.name}:{num_spaces}"
             
             elif code == OcarinaControlCode.DELAY:
-                num_frames = int.from_bytes(reader.read(1))
+                num_frames = self.get_byte()
                 code_insides = f"{OcarinaControlCode.DELAY.name}:{num_frames}"
             
             elif code == OcarinaControlCode.FADE:
-                num_frames_fade = int.from_bytes(reader.read(1))
+                num_frames_fade = self.get_byte()
                 code_insides = f"{OcarinaControlCode.FADE.name}:{num_frames_fade}"
             
             elif code == OcarinaControlCode.FADE2:
-                num_frames_fade2 = struct.unpack('>h', reader.read(2))[0]
+                num_frames_fade2 = self.get_halfword()
                 code_insides = f"{OcarinaControlCode.FADE2.name}:{num_frames_fade2}"
             
             elif code == OcarinaControlCode.SOUND:
-                sound_id = int.from_bytes(reader.read(1))
+                sound_id = self.get_byte()
                 code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
             
             elif code == OcarinaControlCode.SPEED:
-                speed = int.from_bytes(reader.read(1))
+                speed = self.get_byte()
                 code_insides = f"{OcarinaControlCode.SPEED.name}:{speed}"
             
             elif code == OcarinaControlCode.HIGH_SCORE:
-                score_id = int.from_bytes(reader.read(1))
+                score_id = self.get_byte()
                 code_insides = f"{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore(score_id).name if hasattr(OcarinaHighScore, str(score_id)) else str(score_id)}"
             
             elif code == OcarinaControlCode.JUMP:
-                msg_id = struct.unpack('>h', reader.read(2))[0]
+                msg_id = self.get_halfword()
                 code_insides = f"{OcarinaControlCode.JUMP.name}:{msg_id:04X}"
             
             elif code == OcarinaControlCode.NEW_BOX:
                 return list(f"\n<{OcarinaControlCode.NEW_BOX.name}>\n")
             
             elif code == OcarinaControlCode.BACKGROUND:
-                id1 = int.from_bytes(reader.read(1))
-                id2 = int.from_bytes(reader.read(1))
-                id3 = int.from_bytes(reader.read(1))
+                id1 = self.get_byte()
+                id2 = self.get_byte()
+                id3 = self.get_byte()
                 background_id = int.from_bytes([id3, id2, id1, 0], byteorder='little')
                 code_insides = f"{OcarinaControlCode.BACKGROUND.name}:{background_id}"
             
