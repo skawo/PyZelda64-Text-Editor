@@ -6,6 +6,8 @@ import zeldaMessage
 from zeldaEnums import *
 from pathlib import Path
 from PyQt6 import QtGui, QtWidgets
+from PyQt6.QtWidgets import QProgressDialog, QMessageBox
+from PyQt6.QtCore import Qt, QThread, pyqtSignal
 
 class MainEditorWindow(QtWidgets.QMainWindow):
 
@@ -95,13 +97,38 @@ class MainEditorWindow(QtWidgets.QMainWindow):
             sys.exit()
 
     def _getDataToSave(self):
-        errors, data1, data2 = zeldaMessage.convertMessageList(self.messageEditor.messageList, self.messageEditor.messageMode)
-
-        if errors == 1:
-            QtWidgets.QMessageBox.information(self, 'Error', f"Errors parsing message {zeldaMessage.formatMessageID(data1)}:\n" + "\n".join(data2))
-            return (None, None)
-        else:
-            return (data1, data2)
+        progress = QProgressDialog("Saving messages...", None, 0, 100, self)
+        progress.setWindowModality(Qt.WindowModality.WindowModal)
+        progress.setWindowTitle(" ")
+        progress.setMinimumDuration(0)
+        progress.setValue(0)
+        
+        self.worker = MessageSavingThread(self.messageEditor)
+        
+        def handle_progress(current, total):
+            if total > 0:
+                percentage = (current * 100) // total
+                progress.setValue(percentage)
+                progress.setLabelText(f"Saving messages... ({current}/{total})")
+        
+        def handle_result(result):
+            progress.close()
+            errors, data1, data2 = result
+            
+            if errors == 1:
+                QMessageBox.information(self, 'Error', f"Errors parsing message {zeldaMessage.formatMessageID(data1)}:\n" + "\n".join(data2))
+                self.thread_result = (None, None)
+            else:
+                self.thread_result = (data1, data2)
+        
+        self.worker.progress.connect(handle_progress)
+        self.worker.finished.connect(handle_result)
+        self.worker.start()
+        
+        progress.exec()
+        
+        self.worker.wait()
+        return self.thread_result
 
     def _saveFiles(self, path1, path2):
         records, strings = self._getDataToSave()
@@ -227,6 +254,27 @@ class MainEditorWindow(QtWidgets.QMainWindow):
         
     def handleAbout(self):
         QtWidgets.QMessageBox.information(self, 'About', 'Zelda 64 Text Editor v. 0.1 by Skawo')
+
+
+class MessageSavingThread(QThread):
+    finished = pyqtSignal(tuple)
+    progress = pyqtSignal(int, int)
+    
+    def __init__(self, messageEditor):
+        super().__init__()
+        self.messageEditor = messageEditor
+        
+    def progress_callback(self, current, total):
+        self.progress.emit(current, total)
+        
+    def run(self):
+        errors, data1, data2 = zeldaMessage.convertMessageList(
+            self.messageEditor.messageList, 
+            self.messageEditor.messageMode,
+            progress_callback=self.progress_callback 
+        )
+        
+        self.finished.emit((errors, data1, data2))
 
 
 def main():

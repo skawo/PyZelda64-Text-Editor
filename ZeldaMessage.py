@@ -41,21 +41,28 @@ def getMessageList(tableData, stringData, mode):
             
     return messageList
 
-def convertMessageList(messagelist, mode):
+def convertMessageList(messagelist, mode, progress_callback=None):
     records = []
     strings = []
     padding = 0
 
     offset = 0x08000000 if mode == MessageMode.Majora else 0x07000000
 
+    numMes = len(messagelist)
+    processedNum = 0
+
     for mes in messagelist:
 
-        typePos = (mes.boxType << 4) | mes.boxPosition
-
-        records.append(mes.messageId.to_bytes(2, 'big'))
-        records.append(typePos.to_bytes(1, 'big'))
-        records.append(padding.to_bytes(1, 'big'))
-        records.append(offset.to_bytes(4, 'big'))
+        if mode == MessageMode.Majora:
+            records.append(mes.messageId.to_bytes(2, 'big'))
+            records.append(padding.to_bytes(2, 'big'))
+            records.append(offset.to_bytes(4, 'big'))
+        else:
+            typePos = (mes.boxType << 4) | mes.boxPosition
+            records.append(mes.messageId.to_bytes(2, 'big'))
+            records.append(typePos.to_bytes(1, 'big'))
+            records.append(padding.to_bytes(1, 'big'))
+            records.append(offset.to_bytes(4, 'big'))
 
         stringData = mes.save()
 
@@ -70,6 +77,10 @@ def convertMessageList(messagelist, mode):
         
         strings.append(stringData)
         offset += totalLen + paddingNeeded
+
+        if progress_callback:
+            processedNum += 1
+            progress_callback(processedNum, numMes)
 
     records.append(b'\xFF' * 2)
     records.append(b'\x00' * 6)
@@ -102,7 +113,7 @@ class TableRecord:
         
         typePos = reader.read(1)[0]
         
-        self.boxType = OcarinaTextboxType(typePos >> 4)
+        self.boxType = MajoraTextboxType(typePos >> 4) if self.mode == MessageMode.Majora else OcarinaTextboxType(typePos >> 4)
         self.boxPosition = TextboxPosition(typePos & 0x0F)
     
         reader.read(1)
@@ -549,18 +560,20 @@ class MessageMajora(Message):
         while i < len(self.textData):
             # Not a control code, copy char to output buffer
             if self.textData[i] not in '<>':
-                if self.textData[i] == '¡':
-                    data.append(0xAD)
-                elif self.textData[i] == '¿':
-                    data.append(0xAE)
-                elif self.textData[i] == 'ª':
-                    data.append(0xAF)
-                elif self.textData[i] in [e.name for e in MajoraControlCode]:
+                try:
                     data.append(MajoraControlCode[self.textData[i]].value)
-                elif self.textData[i] == '\n':
-                    data.append(MajoraControlCode.LINE_BREAK.value)
-                elif self.textData[i] != '\r':
-                    data.append(ord(self.textData[i]))
+                except:
+                    if self.textData[i] == '¡':
+                        data.append(0xAD)
+                    elif self.textData[i] == '¿':
+                        data.append(0xAE)
+                    elif self.textData[i] == 'ª':
+                        data.append(0xAF)
+                    elif self.textData[i] == '\n':
+                        data.append(MajoraControlCode.LINE_BREAK.value)
+                    elif self.textData[i] != '\r':
+                        data.append(ord(self.textData[i]))
+
                 i += 1
                 continue
                 
