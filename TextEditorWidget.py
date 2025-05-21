@@ -1,13 +1,13 @@
-import ZeldaMessage
+import zeldaMessage
 
-from ZeldaEnums import *
+from zeldaEnums import *
 from PyQt6 import  QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 
-class TextEditorWidget(QtWidgets.QWidget):
+class textEditorWidget(QtWidgets.QWidget):
 
     def __init__(self, parent):
-        super(TextEditorWidget, self).__init__(parent)
+        super().__init__()
 
         self.messageList = None
 
@@ -19,7 +19,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         self.searchField = QtWidgets.QLineEdit()
         self.searchField.setPlaceholderText("Type to search...")
-        self.searchField.textChanged.connect(self.SearchFieldChanged)
+        self.searchField.textChanged.connect(self.searchFieldChanged)
 
         self.messageTable = QtWidgets.QTableWidget()
         self.messageTable.setColumnCount(2)
@@ -38,13 +38,13 @@ class TextEditorWidget(QtWidgets.QWidget):
         buttonsGrid = QtWidgets.QHBoxLayout() 
 
         buttonAdd = QtWidgets.QPushButton("Add", self)
-        buttonAdd.clicked.connect(self.AddMessageClicked)
+        buttonAdd.clicked.connect(self.addMessageClicked)
 
         changeID = QtWidgets.QPushButton("Change ID", self)
-        changeID.clicked.connect(self.ChangeIDClicked)
+        changeID.clicked.connect(self.changeIDClicked)
 
         buttonRemove = QtWidgets.QPushButton("Remove", self)
-        buttonRemove.clicked.connect(self.RemoveClicked)
+        buttonRemove.clicked.connect(self.removeClicked)
 
         buttonsGrid.addWidget(buttonAdd)
         buttonsGrid.addWidget(changeID)
@@ -78,7 +78,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditLayout.addWidget(self.messageOptionsFrame)
 
         self.messageEditor = QtWidgets.QPlainTextEdit()
-        self.messageEditor.textChanged.connect(self.MessageTextChanged)
+        self.messageEditor.textChanged.connect(self.messageTextChanged)
         self.messageEditLayout.addWidget(self.messageEditor)
 
         # --------------- Message Preview
@@ -99,7 +99,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         return
     
-    def CreateModeWidgets(self):
+    def createModeWidgets(self):
         for i in reversed(range(self.messageOptionsLayout.count())): 
             self.messageOptionsLayout.itemAt(i).widget().setParent(None)
 
@@ -108,9 +108,9 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         boxTypeLabel = QtWidgets.QLabel("Box Type:", self)         
 
-        if self.messageMode == MessageMode.Majora:
+        if self.messageMode == messageMode.Majora:
 
-            for tpos in TextboxPosition:
+            for tpos in textboxPosition:
                 self.boxPositionCombo.addItem(tpos.name)  
 
             iconLabel = QtWidgets.QLabel("Icon:", self)  
@@ -120,12 +120,12 @@ class TextEditorWidget(QtWidgets.QWidget):
 
             self.boxTypeCombo = QtWidgets.QComboBox()
 
-            for type in MajoraTextboxType:
+            for type in majoraTextboxType:
                 self.boxTypeCombo.addItem(type.name)
 
             self.iconComboMajora = QtWidgets.QComboBox() 
 
-            for icon in MajoraIcon:
+            for icon in majoraIcon:
                 self.iconComboMajora.addItem(icon.name)
 
             self.jumpToField = QtWidgets.QLineEdit()
@@ -146,7 +146,7 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.messageOptionsLayout.addWidget(self.secondPriceField, 5, 1) 
         else:
 
-            for tpos in TextboxPosition:
+            for tpos in textboxPosition:
                 self.boxPositionCombo.addItem(tpos.name)  
 
                 if self.boxPositionCombo.count() == 4:
@@ -154,7 +154,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
             self.boxTypeCombo = QtWidgets.QComboBox()
 
-            for type in OcarinaTextboxType:
+            for type in ocarinaTextboxType:
                 self.boxTypeCombo.addItem(type.name)
 
             self.messageOptionsLayout.addWidget(boxTypeLabel, 0, 0)
@@ -162,90 +162,89 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.messageOptionsLayout.addWidget(boxPositionLabel, 1, 0)
             self.messageOptionsLayout.addWidget(self.boxPositionCombo, 1, 1)
 
-        self.boxTypeCombo.currentTextChanged.connect(self.BoxTypeChanged)
-        self.boxPositionCombo.currentTextChanged.connect(self.BoxPositionChanged)
+        self.boxTypeCombo.currentTextChanged.connect(self.boxTypeChanged)
+        self.boxPositionCombo.currentTextChanged.connect(self.boxPositionChanged)
 
-
-    def PopulateEditor(self, messageList, mode):
+    def populateEditor(self, messageList, mode):
         self.messageTable.blockSignals(True)
         
         self.messageList = messageList
         self.messageMode = mode
 
-        self.CreateModeWidgets()
+        self.createModeWidgets()
 
         for i in range(self.messageTable.rowCount()):
             self.messageTable.removeRow(0)
 
         for message in messageList:
-            self.AddMsgRow(self.messageTable.rowCount(), message.messageId, message.textData)
+            self.addMsgRow(self.messageTable.rowCount(), message.messageId, message.textData)
 
         self.messageTable.blockSignals(False)
         self.messageTable.selectRow(0)
 
-    def AddMsgRow(self, index, messageId, messageText):
+    def addMsgRow(self, index, messageId, messageText):
         self.messageTable.insertRow(index) 
-        self.UpdateMsgRow(index, messageId, messageText)    
+        self.updateMsgRow(index, messageId, messageText)    
 
-    def UpdateMsgRow(self, index, messageId, messageText):
-        id = QtWidgets.QTableWidgetItem(ZeldaMessage.FormatMessageID(messageId))
+    def updateMsgRow(self, index, messageId, messageText):
+        id = QtWidgets.QTableWidgetItem(zeldaMessage.formatMessageID(messageId))
         text = QtWidgets.QTableWidgetItem(messageText)
 
         self.messageTable.setItem(index, 0, id)
         self.messageTable.setItem(index, 1, text)
 
-    def UpdateCurrentMsgRow(self):
-        self.UpdateMsgRow(self.messageTable.selectedIndexes()[0].row(), self.curMessage.messageId, self.curMessage.textData)
+    def updateCurrentMsgRow(self):
+        self.updateMsgRow(self.messageTable.selectedIndexes()[0].row(), self.curMessage.messageId, self.curMessage.textData)
 
-    def GetMessageById(self, id):
+    def getMessageById(self, id):
         for index, item in enumerate(self.messageList): 
             if item.messageId == id:
                 return item
             
         return None
     
-    def GetCurrentMessage(self):
+    def getCurrentMessage(self):
         msgId = int(self.messageTable.selectedItems()[0].text(), 16) & 0xFFFF
-        return self.GetMessageById(msgId)
+        return self.getMessageById(msgId)
 
     def messageTableItemChanged(self):
         self.messageEditor.blockSignals(True)
         self.boxPositionCombo.blockSignals(True)
         self.boxTypeCombo.blockSignals(True)
     
-        self.curMessage = self.GetCurrentMessage()
+        self.curMessage = self.getCurrentMessage()
 
         if self.curMessage is not None:
             self.messageEditor.setPlainText(self.curMessage.textData)
-            self.boxPositionCombo.setCurrentText(TextboxPosition(self.curMessage.boxPosition).name)
+            self.boxPositionCombo.setCurrentText(textboxPosition(self.curMessage.boxPosition).name)
 
-            if self.messageMode == MessageMode.Majora:
-                self.boxTypeCombo.setCurrentText(MajoraTextboxType(self.curMessage.boxType).name)
-                self.iconComboMajora.setCurrentText(MajoraIcon(self.curMessage.majoraIcon).name)
-                self.jumpToField.setText(ZeldaMessage.FormatMessageID(self.curMessage.majoraJumpTo))
+            if self.messageMode == messageMode.Majora:
+                self.boxTypeCombo.setCurrentText(majoraTextboxType(self.curMessage.boxType).name)
+                self.iconComboMajora.setCurrentText(majoraIcon(self.curMessage.majoraIcon).name)
+                self.jumpToField.setText(zeldaMessage.formatMessageID(self.curMessage.majoraJumpTo))
                 self.firstPriceField.setText(str(self.curMessage.majoraFirstPrice))
                 self.secondPriceField.setText(str(self.curMessage.majoraSecondPrice))
             else:
-                self.boxTypeCombo.setCurrentText(OcarinaTextboxType(self.curMessage.boxType).name)
+                self.boxTypeCombo.setCurrentText(ocarinaTextboxType(self.curMessage.boxType).name)
 
         self.messageEditor.blockSignals(False)
         self.boxPositionCombo.blockSignals(False)
         self.boxTypeCombo.blockSignals(False)
 
-    def MessageTextChanged(self):
+    def messageTextChanged(self):
         self.curMessage.textData = self.messageEditor.toPlainText()
-        self.UpdateCurrentMsgRow()
+        self.updateCurrentMsgRow()
 
-    def BoxTypeChanged(self):
-        if self.messageMode == MessageMode.Majora:
-           self.curMessage.boxType = MajoraTextboxType[self.boxTypeCombo.currentText()] 
+    def boxTypeChanged(self):
+        if self.messageMode == messageMode.Majora:
+           self.curMessage.boxType = majoraTextboxType[self.boxTypeCombo.currentText()] 
         else:
-            self.curMessage.boxType = OcarinaTextboxType[self.boxTypeCombo.currentText()]
+            self.curMessage.boxType = ocarinaTextboxType[self.boxTypeCombo.currentText()]
 
-    def BoxPositionChanged(self):
-        self.curMessage.boxPosition = TextboxPosition[self.boxPositionCombo.currentText()]
+    def boxPositionChanged(self):
+        self.curMessage.boxPosition = textboxPosition[self.boxPositionCombo.currentText()]
 
-    def AddMessageClicked(self):
+    def addMessageClicked(self):
         if self.messageList is not None:
             input, done = QtWidgets.QInputDialog.getText(self, ' ', 'New Message ID (hex):')
 
@@ -254,12 +253,12 @@ class TextEditorWidget(QtWidgets.QWidget):
 
             try:
                 id = int(input, 16)
-                msg = self.GetMessageById(id)
+                msg = self.getMessageById(id)
                 if msg is not None:
                     QtWidgets.QMessageBox.information(self, 'Error', 'Message ID already exists.')
                 else:
-                    self.AddMsgRow(self.messageTable.rowCount() - 1, id, "")     
-                    message = ZeldaMessage.Message(None, None, self.messageMode)
+                    self.addMsgRow(self.messageTable.rowCount() - 1, id, "")     
+                    message = zeldaMessage.message(None, None, self.messageMode)
                     message.messageId = id
                     self.messageList.append(message)  
                     self.messageTable.selectRow(self.messageTable.rowCount() - 1)    
@@ -267,8 +266,7 @@ class TextEditorWidget(QtWidgets.QWidget):
             except:
                 QtWidgets.QMessageBox.information(self, 'Error', 'Invalid message ID.')
 
-
-    def ChangeIDClicked(self):
+    def changeIDClicked(self):
         if self.messageList is not None:
             input, done = QtWidgets.QInputDialog.getText(self, ' ', 'New Message ID (hex):')
 
@@ -277,22 +275,22 @@ class TextEditorWidget(QtWidgets.QWidget):
             
             try:
                 id = int(input, 16)
-                msg = self.GetMessageById(id)
+                msg = self.getMessageById(id)
                 if msg is not None:
                     QtWidgets.QMessageBox.information(self, 'Error', 'Message ID already exists.')  
                 else:
                     self.curMessage.messageId = id 
-                    self.UpdateCurrentMsgRow()             
+                    self.updateCurrentMsgRow()             
             except:
                 QtWidgets.QMessageBox.information(self, 'Error', 'Invalid message ID.')        
 
-    def RemoveClicked(self):
+    def removeClicked(self):
         if self.messageList is not None:
             index = self.messageTable.selectedIndexes()[0].row()
             self.messageList.remove(self.curMessage)
             self.messageTable.removeRow(index)
 
-    def SearchFieldChanged(self):
+    def searchFieldChanged(self):
 
         for index, item in enumerate(self.messageList): 
             self.messageTable.hideRow(index)

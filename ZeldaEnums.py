@@ -4,16 +4,16 @@ MAX_MES_SIZE = 1280
 SAVE_TABLE_FILENAME = "message_data_static_NES.tbl"
 SAVE_STRINGS_FILENAME = "message_data_static_NES.bin"
 
-class DestinationMode(IntEnum):
+class destinationMode(IntEnum):
     Files = 0
     ROM = 1
 
-class MessageMode(IntEnum):
+class messageMode(IntEnum):
     Ocarina = 0
     Majora = 1
     Credits = 2
 
-class OcarinaTextboxType(IntEnum):
+class ocarinaTextboxType(IntEnum):
     Black = 0
     Wooden = 1
     Blue = 2
@@ -22,7 +22,7 @@ class OcarinaTextboxType(IntEnum):
     None_Black = 5
     Credits = 11
 
-class TextboxPosition(IntEnum):
+class textboxPosition(IntEnum):
     Dynamic = 0
     Top = 1
     Center = 2
@@ -36,7 +36,7 @@ class TextboxPosition(IntEnum):
     Unk_49 = 49
     Unk_113 = 113
 
-class OcarinaControlCode(IntEnum):
+class ocarinaControlCode(IntEnum):
     LINE_BREAK = 0x01
     END = 0x02
     NEW_BOX = 0x04
@@ -118,7 +118,7 @@ class OcarinaControlCode(IntEnum):
     CONTROL_STICK = 0xAA
     D_PAD = 0xAB
 
-class OcarinaMsgColor(IntEnum):
+class ocarinaMsgColor(IntEnum):
     W = 0x40
     R = 0x41
     G = 0x42
@@ -128,7 +128,7 @@ class OcarinaMsgColor(IntEnum):
     Y = 0x46
     BLK = 0x47
 
-class OcarinaHighScore(IntEnum):
+class ocarinaHighScore(IntEnum):
     ARCHERY = 0x00
     POE_POINTS = 0x01
     FISH_WEIGHT = 0x02
@@ -137,7 +137,7 @@ class OcarinaHighScore(IntEnum):
     HS_UNK = 0x05
     DAMPE_RACE = 0x06
 
-class OcarinaIcon(IntEnum):
+class ocarinaIcon(IntEnum):
     DEKU_STICK = 0
     DEKU_NUT = 1
     BOMBS = 2
@@ -261,7 +261,7 @@ class OcarinaIcon(IntEnum):
     MAGIC_JAR = 120
     BIG_MAGIC_JAR = 121
 
-class MajoraTextboxType(IntEnum):
+class majoraTextboxType(IntEnum):
     Black = 0
     Wooden = 1
     Blue = 2
@@ -279,7 +279,7 @@ class MajoraTextboxType(IntEnum):
     None4 = 14
     Red2 = 15
 
-class MajoraMsgColor(IntEnum):
+class majoraMsgColor(IntEnum):
     D = 0x00
     R = 0x01
     G = 0x02
@@ -290,7 +290,7 @@ class MajoraMsgColor(IntEnum):
     S = 0x07
     O = 0x08
 
-class MajoraIcon(IntEnum):
+class majoraIcon(IntEnum):
     GREEN_RUPEE = 1
     BLUE_RUPEE = 2
     WHITE_RUPEE = 3
@@ -441,7 +441,7 @@ class MajoraIcon(IntEnum):
     EXCLAMATION_MARK = 240
     NO_ICON = 254
 
-class MajoraControlCode(IntEnum):
+class majoraControlCode(IntEnum):
     COLOR_DEFAULT = 0x00
     COLOR_RED = 0x01
     COLOR_GREEN = 0x02
