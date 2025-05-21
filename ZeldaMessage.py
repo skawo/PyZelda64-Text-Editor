@@ -109,12 +109,12 @@ class TableRecord:
 class Message:
     def __init__(self, reader, record, mode):
         self.mode = mode
+        self.reader = reader
+        self.record = record
         self.messageId = 0
         self.boxType = 0
         self.boxPosition = 0
         self.textData = ""
-        self.reader = reader
-        self.record = record
 
     def _get_u8(self):
         return self.reader.read(1)[0]
@@ -137,7 +137,6 @@ class MessageOcarina(Message):
         super().__init__(reader, record, mode)
 
         if self.reader is not None and self.record is not None:
-            self.reader = reader
             self.messageId = record.messageId & 0xFFFF
             self.boxType = record.boxType
             self.boxPosition = record.boxPosition
