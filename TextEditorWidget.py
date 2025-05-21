@@ -1,7 +1,7 @@
 import zeldaMessage
 
 from zeldaEnums import *
-from plainTextEditorWithContext import CustomPlainTextEdit
+from messageTextEditor import CustomPlainTextEdit
 from hSpinBox import InputBox
 
 from PyQt6 import  QtGui, QtWidgets
