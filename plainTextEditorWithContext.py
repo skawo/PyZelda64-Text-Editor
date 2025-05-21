@@ -48,22 +48,22 @@ class CustomPlainTextEdit(QtWidgets.QPlainTextEdit):
         
         if self.mode == MessageMode.Majora:
             colorMenu = QMenu("Color", self)
-            colorMenu.setToolTip("Text until the next Color tag will be of this color. The color will persist even to the next textbox.")
+            #colorMenu.setToolTip("Text until the next Color tag will be of this color. The color will persist even to the next textbox.")
             
             buttonsMenu = QMenu("Buttons", self)
-            buttonsMenu.setToolTip("Add a button icon to the textbox.")
+            #buttonsMenu.setToolTip("Add a button icon to the textbox.")
             
             scores_menu = QMenu("Scores and timers", self)
-            scores_menu.setToolTip("Various scores and timers.")
+            #scores_menu.setToolTip("Various scores and timers.")
             
             prompts_menu = QMenu("Prompts", self)
-            prompts_menu.setToolTip("Tags relating to player input.")
+            #prompts_menu.setToolTip("Tags relating to player input.")
             
             completion_menu = QMenu("Completion-related", self)
-            completion_menu.setToolTip("Tags relating to quest completion.")
+            #completion_menu.setToolTip("Tags relating to quest completion.")
             
             soundAction = QAction("Sound...", self)
-            soundAction.setToolTip("Plays a sound effect.")
+            #soundAction.setToolTip("Plays a sound effect.")
             soundAction.triggered.connect(self.soundEffClicked)
             
             self.addTagsToMenu(colorMenu, ContextMenuData.MajoraColors)
@@ -81,19 +81,19 @@ class CustomPlainTextEdit(QtWidgets.QPlainTextEdit):
             controlTagsMenu.addAction(soundAction)
         else:
             colorMenu = QMenu("Color", self)
-            colorMenu.setToolTip("Text until the next Color tag (or until the end of the textbox if none are present) will be of this color.")
+            #colorMenu.setToolTip("Text until the next Color tag (or until the end of the textbox if none are present) will be of this color.")
             
             highScoreMenu = QMenu("High Score", self)
-            highScoreMenu.setToolTip("Prints a player's high score.")
+            #highScoreMenu.setToolTip("Prints a player's high score.")
             
             buttonsMenu = QMenu("Buttons", self)
-            buttonsMenu.setToolTip("Add a button icon to the textbox.")
+            #buttonsMenu.setToolTip("Add a button icon to the textbox.")
             
             scoreMenu = QMenu("Score", self)
-            scoreMenu.setToolTip("Prints a player's score.")
+            #scoreMenu.setToolTip("Prints a player's score.")
             
             iconMenu = QMenu("Icon...", self)
-            iconMenu.setToolTip("Draws specified icon inside the textbox.")
+            #iconMenu.setToolTip("Draws specified icon inside the textbox.")
             
             soundAction = QAction("Sound...", self)
             soundAction.setToolTip("Plays a sound effect. Only one sound effect can be played per textbox.")
@@ -127,12 +127,8 @@ class CustomPlainTextEdit(QtWidgets.QPlainTextEdit):
             if item:
                 action = QAction(item[0], self)
                 action.triggered.connect(lambda checked, text=item: self.insertTag(text))
-
                 action.setToolTip(item[2])
-              
-
                 action.hovered.connect(self.showToolTipAction)
-
                 menu.addAction(action)
     
     def copyAsC(self):
