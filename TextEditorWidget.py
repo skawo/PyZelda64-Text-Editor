@@ -1,6 +1,7 @@
 import zeldaMessage
 
 from zeldaEnums import *
+from plainTextEditorWithContext import CustomPlainTextEdit
 from hSpinBox import InputBox
 
 from PyQt6 import  QtGui, QtWidgets
@@ -80,7 +81,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageOptionsFrame.setLayout(self.messageOptionsLayout)
         self.messageEditLayout.addWidget(self.messageOptionsFrame)
 
-        self.messageEditor = QtWidgets.QPlainTextEdit()
+        self.messageEditor = CustomPlainTextEdit()
         self.messageEditor.setMaximumWidth(700)
         self.messageEditor.textChanged.connect(self.messageTextChanged)
         self.messageEditLayout.addWidget(self.messageEditor)
@@ -166,6 +167,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageMode = mode
 
         self.createModeWidgets()
+        self.messageEditor.setMode(self.messageMode)
 
         for _ in range(self.messageTable.rowCount()):
             self.messageTable.removeRow(0)
