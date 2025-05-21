@@ -125,35 +125,36 @@ class Message:
 
         if mode == MessageMode.Majora:
             self.messageId = record.messageId & 0xFFFF
-            self.boxType = self._get_byte()
-            self.boxPosition = self._get_byte() 
-            self.majoraIcon = self._get_byte()
-            self.majoraJumpTo = self._get_halfword()
-            self.majoraFirstPrice = self._get_halfword()
-            self.majoraSecondPrice = self._get_halfword()
-            self._get_halfword() # Padding
+            self.boxType = self._get_u8()
+            self.boxPosition = self._get_u8() 
+            self.majoraIcon = self._get_u8()
+            self.majoraJumpTo = self._get_u16()
+            self.majoraFirstPrice = self._get_u16()
+            self.majoraSecondPrice = self._get_u16()
+            self._get_u16() # Padding
         else:
             self.messageId = record.messageId & 0xFFFF
             self.boxType = record.boxType
             self.boxPosition = record.boxPosition
 
         self.textData = self._getStringData()
+        del self.reader
 
-    def _get_byte(self):
-        return int.from_bytes(self.reader.read(1))
+    def _get_u8(self):
+        return self.reader.read(1)[0]
     
-    def _get_halfword(self):
-        return struct.unpack('>h', self.reader.read(2))[0]
+    def _get_u16(self):
+        return struct.unpack('>H', self.reader.read(2))[0]
     
-    def _get_word(self):
-        return struct.unpack('>w', self.reader.read(4))[0]
+    def _get_u32(self):
+        return struct.unpack('>I', self.reader.read(4))[0]
 
     def _getStringData(self):
         char_data = []
-        cur_byte = self._get_byte()
+        cur_byte = self._get_u8()
 
         controlCodeType = MajoraControlCode if self.mode == MessageMode.Majora else OcarinaControlCode
-        func = self._getControlCodeMajora if self.mode == MessageMode.Majora else self._getControlCode
+        func = self._getControlCodeMajora if self.mode == MessageMode.Majora else self._getControlCodeOcarina
 
         boundByte = 0xAF if self.mode == MessageMode.Majora else 0x9E
 
@@ -161,7 +162,7 @@ class Message:
             read_control_code = False
 
             if cur_byte < 0x7F or cur_byte > boundByte:
-                if (cur_byte in controlCodeType):
+                if cur_byte in controlCodeType:
                     char_data.extend(func(controlCodeType(cur_byte)))
                     read_control_code = True
 
@@ -173,16 +174,18 @@ class Message:
                 elif 0x80 <= cur_byte <= boundByte:
                     char_data.append(controlCodeType(cur_byte).name[0])
                 # ASCII-mapped characters
-                elif ((0x20 <= cur_byte < 0x7F) or 
-                    chr(cur_byte).isalnum() or 
-                    chr(cur_byte).isspace() or 
-                    chr(cur_byte) in string.punctuation):
+                elif (
+                    (0x20 <= cur_byte < 0x7F)
+                    or chr(cur_byte).isalnum()
+                    or chr(cur_byte).isspace()
+                    or chr(cur_byte) in string.punctuation
+                ):
                     char_data.append(chr(cur_byte))
                 else:
                     char_data.extend(f"<UNK {cur_byte:X}>")
 
             if self.reader.tell() != len(self.reader.getvalue()):
-                cur_byte = self._get_byte()
+                cur_byte = self._get_u8()
             else:
                 cur_byte = controlCodeType.END
 
@@ -192,62 +195,66 @@ class Message:
         code_bank = []
         code_insides = ""
 
-        if code in [
-            MajoraControlCode.COLOR_DEFAULT,
-            MajoraControlCode.COLOR_RED,
-            MajoraControlCode.COLOR_GREEN,
-            MajoraControlCode.COLOR_BLUE,
-            MajoraControlCode.COLOR_YELLOW,
-            MajoraControlCode.COLOR_NAVY,
-            MajoraControlCode.COLOR_PINK,
-            MajoraControlCode.COLOR_SILVER,
-            MajoraControlCode.COLOR_ORANGE
-        ]:
-            code_insides = MajoraMsgColor(code.value).name
+        try:
+            if code in [
+                MajoraControlCode.COLOR_DEFAULT,
+                MajoraControlCode.COLOR_RED,
+                MajoraControlCode.COLOR_GREEN,
+                MajoraControlCode.COLOR_BLUE,
+                MajoraControlCode.COLOR_YELLOW,
+                MajoraControlCode.COLOR_NAVY,
+                MajoraControlCode.COLOR_PINK,
+                MajoraControlCode.COLOR_SILVER,
+                MajoraControlCode.COLOR_ORANGE,
+            ]:
+                code_insides = MajoraMsgColor(code.value).name
 
-        elif code == MajoraControlCode.SHIFT:
-            num_spaces = self._get_byte()
-            code_insides = f"{MajoraControlCode.SHIFT}:{num_spaces}"
+            elif code == MajoraControlCode.SHIFT:
+                num_spaces = self._get_u8()
+                code_insides = f"{MajoraControlCode.SHIFT}:{num_spaces}"
 
-        elif code == MajoraControlCode.LINE_BREAK:
-            return list("\n")
+            elif code == MajoraControlCode.LINE_BREAK:
+                return list("\n")
 
-        elif code == MajoraControlCode.NEW_BOX:
-            return list(f"\n<{MajoraControlCode.NEW_BOX.name}>\n")
+            elif code == MajoraControlCode.NEW_BOX:
+                return list(f"\n<{MajoraControlCode.NEW_BOX.name}>\n")
 
-        elif code == MajoraControlCode.NEW_BOX_CENTER:
-            return list(f"\n<{MajoraControlCode.NEW_BOX_CENTER.name}>\n")
+            elif code == MajoraControlCode.NEW_BOX_CENTER:
+                return list(f"\n<{MajoraControlCode.NEW_BOX_CENTER.name}>\n")
 
-        elif code in [
-            MajoraControlCode.DELAY,
-            MajoraControlCode.DELAY_NEWBOX,
-            MajoraControlCode.DELAY_END,
-            MajoraControlCode.FADE
-        ]:
-            delay = self._get_halfword()
-            code_insides = f"{code.name}:{delay}"
+            elif code in [
+                MajoraControlCode.DELAY,
+                MajoraControlCode.DELAY_NEWBOX,
+                MajoraControlCode.DELAY_END,
+                MajoraControlCode.FADE,
+            ]:
+                delay = self._get_u16()
+                code_insides = f"{code.name}:{delay}"
 
-        elif code == MajoraControlCode.SOUND:
-            sound_id = self._get_halfword()
-            code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
+            elif code == MajoraControlCode.SOUND:
+                sound_id = self._get_u16()
+                code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
 
-        else:
-            code_insides = code.name
-
+            else:
+                code_insides = code.name
+        except Exception:
+                code_bank.extend(f"<UNK:{code}>")
+                return code_bank
+        
         code_bank.extend(f"<{code_insides}>")
         return code_bank
 
-    def _getControlCode(self, code):
+    def _getControlCodeOcarina(self, code):
         code_bank = []
         code_insides = ""
 
         try:
             if code == OcarinaControlCode.COLOR:
-                color = OcarinaMsgColor(self._get_byte())
+                color = OcarinaMsgColor(self._get_u8())
                 code_insides = color.name
             
             elif code == OcarinaControlCode.ICON:
-                icon_id = self._get_byte()
+                icon_id = self._get_u8()
 
                 try: icon_name = OcarinaIcon(icon_id).name
                 except: icon_name = str(icon_id)
@@ -258,31 +265,31 @@ class Message:
                 return list("\n")
             
             elif code == OcarinaControlCode.SHIFT:
-                num_spaces = self._get_byte()
+                num_spaces = self._get_u8()
                 code_insides = f"{OcarinaControlCode.SHIFT.name}:{num_spaces}"
             
             elif code == OcarinaControlCode.DELAY:
-                num_frames = self._get_byte()
+                num_frames = self._get_u8()
                 code_insides = f"{OcarinaControlCode.DELAY.name}:{num_frames}"
             
             elif code == OcarinaControlCode.FADE:
-                num_frames_fade = self._get_byte()
+                num_frames_fade = self._get_u8()
                 code_insides = f"{OcarinaControlCode.FADE.name}:{num_frames_fade}"
             
             elif code == OcarinaControlCode.FADE2:
-                num_frames_fade2 = self._get_halfword()
+                num_frames_fade2 = self._get_u16()
                 code_insides = f"{OcarinaControlCode.FADE2.name}:{num_frames_fade2}"
             
             elif code == OcarinaControlCode.SOUND:
-                sound_id = self._get_halfword()
+                sound_id = self._get_u16()
                 code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
             
             elif code == OcarinaControlCode.SPEED:
-                speed = self._get_byte()
+                speed = self._get_u8()
                 code_insides = f"{OcarinaControlCode.SPEED.name}:{speed}"
             
             elif code == OcarinaControlCode.HIGH_SCORE:
-                score_id = self._get_byte()
+                score_id = self._get_u8()
 
                 try: score_name = OcarinaHighScore(score_id).name
                 except: score_name = str(score_id)
@@ -290,7 +297,7 @@ class Message:
                 code_insides = f"{OcarinaControlCode.HIGH_SCORE.name}:{score_name}"
             
             elif code == OcarinaControlCode.JUMP:
-                msg_id = self._get_halfword()
+                msg_id = self._get_u16()
                 code_insides = f"{OcarinaControlCode.JUMP.name}:{msg_id:04X}"
             
             elif code == OcarinaControlCode.NEW_BOX:
@@ -300,12 +307,12 @@ class Message:
                 id1 = self._get_byte()
                 id2 = self._get_byte()
                 id3 = self._get_byte()
-                background_id = int.from_bytes([id3, id2, id1, 0], byteorder='little')
+                background_id = (id1 << 16) | (id2 << 8) | id3
                 code_insides = f"{OcarinaControlCode.BACKGROUND.name}:{background_id}"
             
             else:
                 code_insides = code.name
-        except:
+        except Exception:
                 code_bank.extend(f"<UNK:{code}>")
                 return code_bank
 
@@ -325,7 +332,7 @@ class Message:
         i = 0
         while i < len(self.textData):
             # Not a control code, copy char to output buffer
-            if self.textData[i] != '<' and self.textData[i] != '>':
+            if self.textData[i] not in '<>':
                 try:
                     # Check if character is a valid control code
                     control_code = OcarinaControlCode[self.textData[i]]
@@ -372,10 +379,7 @@ class Message:
                         data.pop()
                         
                     if len(self.textData) > i + len('\n'):
-                        if len('\n') == 2:  # Windows-style newline
-                            s = self.textData[i + 1:i + 3]
-                        else:
-                            s = self.textData[i + 1]
+                        s = self.textData[i + 1]
                             
                         if s == '\n':
                             i += len('\n')  # Skips next linebreak
@@ -406,7 +410,7 @@ class Message:
                 output.append(OcarinaControlCode.JUMP.value)
                 jump_id = int(code[1], 16) 
                 jump_bytes = struct.pack(">H", jump_id)  
-                output.extend([jump_bytes[0], jump_bytes[1]])
+                output.extend(jump_bytes)
                 
             elif code[0] in ["DELAY", "FADE", "SHIFT", "SPEED"]:
                 output.append(OcarinaControlCode[code[0]].value)
@@ -416,7 +420,7 @@ class Message:
                 output.append(OcarinaControlCode[code[0]].value)
                 fade_amount = int(code[1])
                 fade_bytes = struct.pack(">h", fade_amount) 
-                output.extend([fade_bytes[0], fade_bytes[1]])
+                output.extend(fade_bytes)
                 
             elif code[0] == "ICON":
                 output.append(OcarinaControlCode[code[0]].value)
@@ -426,7 +430,7 @@ class Message:
                 output.append(OcarinaControlCode.BACKGROUND.value)
                 background_id = int(code[1])
                 background_bytes = struct.pack(">I", background_id) 
-                output.extend([background_bytes[1], background_bytes[2], background_bytes[3]])
+                output.extend(background_bytes[1:])
                 
             elif code[0] == "HIGH_SCORE":
                 output.append(OcarinaControlCode.HIGH_SCORE.value)
@@ -443,7 +447,7 @@ class Message:
                     sound_value = 0
                 
                 sound_bytes = struct.pack(">h", sound_value) 
-                output.extend([sound_bytes[0], sound_bytes[1]])
+                output.extend(sound_bytes)
                 
             else:
                 try:

@@ -15,24 +15,24 @@ class MainEditorWindow(QtWidgets.QMainWindow):
         self.statusBar()
         mainMenu = self.menuBar()
 
-        fileMenu = mainMenu.addMenu('&File')
+        fileMenu = mainMenu.addMenu('File')
       
-        openAction = QtGui.QAction('&Open...', self)
+        openAction = QtGui.QAction('Open...', self)
         openAction.triggered.connect(self.handleOpenROM)
 
-        openSeparateAction = QtGui.QAction('&Open separate files...', self)
+        openSeparateAction = QtGui.QAction('Open separate files...', self)
         openSeparateAction.triggered.connect(self.handleOpenFiles)
 
-        self.saveAction = QtGui.QAction('&Save', self)
+        self.saveAction = QtGui.QAction('Save', self)
         self.saveAction.triggered.connect(self.handleSave)
         
-        self.saveAsAction = QtGui.QAction('&Save as...', self)
+        self.saveAsAction = QtGui.QAction('Save as...', self)
         self.saveAsAction.triggered.connect(self.handleSaveAs)
 
-        self.saveAsSeparateAction = QtGui.QAction('&Save to separate files...', self)
+        self.saveAsSeparateAction = QtGui.QAction('Save to separate files...', self)
         self.saveAsSeparateAction.triggered.connect(self.handleSaveAsSeparate)
         
-        exitAction = QtGui.QAction('&Exit', self)
+        exitAction = QtGui.QAction('Exit', self)
         exitAction.triggered.connect(self.HandleCloseApplication)
 
         fileMenu.addAction(openAction)
@@ -44,21 +44,21 @@ class MainEditorWindow(QtWidgets.QMainWindow):
         fileMenu.addSeparator()
         fileMenu.addAction(exitAction)
 
-        toolsMenu = mainMenu.addMenu('&Tools')
+        toolsMenu = mainMenu.addMenu('Tools')
 
-        self.reSortAction = QtGui.QAction('&Re-sort entries', self)
+        self.reSortAction = QtGui.QAction('Re-sort entries', self)
         self.reSortAction.triggered.connect(self.handleResort)
 
-        self.importDataAction = QtGui.QAction('&Import data', self)
+        self.importDataAction = QtGui.QAction('Import data', self)
         self.importDataAction.triggered.connect(self.handleImport)
 
-        self.removeEmptyAction = QtGui.QAction('&Remove empty entries', self)
+        self.removeEmptyAction = QtGui.QAction('Remove empty entries', self)
         self.removeEmptyAction.triggered.connect(self.handleRemoveEmpty)
 
-        self.exportToJSONAction = QtGui.QAction('&Export to JSON...', self)
+        self.exportToJSONAction = QtGui.QAction('Export to JSON...', self)
         self.exportToJSONAction.triggered.connect(self.handleExportJSON)        
 
-        self.importFromJSONAction = QtGui.QAction('&Insert from JSON...', self)
+        self.importFromJSONAction = QtGui.QAction('Insert from JSON...', self)
         self.importFromJSONAction.triggered.connect(self.handleImportJSON) 
 
         toolsMenu.addAction(self.reSortAction)
@@ -67,9 +67,9 @@ class MainEditorWindow(QtWidgets.QMainWindow):
         toolsMenu.addAction(self.exportToJSONAction)
         toolsMenu.addAction(self.importFromJSONAction)
 
-        aboutMenu = mainMenu.addMenu('&Help')
+        aboutMenu = mainMenu.addMenu('Help')
         
-        aboutAction = QtGui.QAction('&About', self)
+        aboutAction = QtGui.QAction('About', self)
         aboutAction.triggered.connect(self.handleAbout)      
     
         aboutMenu.addAction(aboutAction)
