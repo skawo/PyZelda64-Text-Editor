@@ -9,6 +9,15 @@ from PyQt6 import QtGui, QtWidgets
 
 class MainEditorWindow(QtWidgets.QMainWindow):
 
+    def __init__(self):
+        super().__init__()
+        
+        self.resize(1000, 600)
+        self.setWindowTitle('Zelda 64 Text Editor')
+
+        self.createMenuBar()
+        self.CreateEditor()
+
     def createMenuBar(self):
 
         self.setWindowIcon(QtGui.QIcon('res/z64text.ico'))
@@ -77,14 +86,6 @@ class MainEditorWindow(QtWidgets.QMainWindow):
 
         self._changeStatusBarEnableStatus(False)
 
-    def __init__(self):
-        super().__init__()
-        self.setGeometry(50, 50, 1000, 600)
-        self.setWindowTitle('Zelda 64 Text Editor')
-
-        self.createMenuBar()
-        self.CreateEditor()
-
     def CreateEditor(self):
         self.messageEditor = textEditorWidget.TextEditorWidget(self)
         self.setCentralWidget(self.messageEditor)
@@ -94,13 +95,20 @@ class MainEditorWindow(QtWidgets.QMainWindow):
             sys.exit()
 
     def _getDataToSave(self):
-        return zeldaMessage.convertMessageList(self.messageEditor.messageList, self.messageEditor.messageMode)
+        errors, data1, data2 = zeldaMessage.convertMessageList(self.messageEditor.messageList, self.messageEditor.messageMode)
+
+        if errors == 1:
+            QtWidgets.QMessageBox.information(self, 'Error', f"Errors parsing message {zeldaMessage.formatMessageID(data1)}:\n" + "\n".join(data2))
+            return (None, None)
+        else:
+            return (data1, data2)
 
     def _saveFiles(self, path1, path2):
         records, strings = self._getDataToSave()
 
-        Path(path1).write_bytes(records)
-        Path(path2).write_bytes(strings)      
+        if records is not None and strings is not None:
+            Path(path1).write_bytes(records)
+            Path(path2).write_bytes(strings)      
 
     def handleSave(self):
         #if self.destPath2 is None, then assume we're saving to ROM.
@@ -121,7 +129,7 @@ class MainEditorWindow(QtWidgets.QMainWindow):
 
         if folderPath != '':
             path1 = os.path.join(folderPath, f"{SAVE_TABLE_FILENAME}.tbl")
-            path2 = os.path.join(folderPath, f"{SAVE_STRINGS_FILENAME}.tbl")
+            path2 = os.path.join(folderPath, f"{SAVE_STRINGS_FILENAME}.bin")
             self._saveFiles(path1, path2)      
 
     def handleOpenROM(self):

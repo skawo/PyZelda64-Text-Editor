@@ -1,8 +1,8 @@
 from enum import IntEnum
 
 MAX_MES_SIZE = 1280
-SAVE_TABLE_FILENAME = "message_data_static_NES.tbl"
-SAVE_STRINGS_FILENAME = "message_data_static_NES.bin"
+SAVE_TABLE_FILENAME = "message_data_static_NES"
+SAVE_STRINGS_FILENAME = "message_data_static_NES"
 
 class DestinationMode(IntEnum):
     Files = 0
@@ -586,7 +586,6 @@ class MajoraControlCode(IntEnum):
     ú = 0xAA
     û = 0xAB
     ü = 0xAC
-    ª = 0xAF
     A_BUTTON = 0xB0
     B_BUTTON = 0xB1
     C_BUTTON = 0xB2

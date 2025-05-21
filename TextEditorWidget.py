@@ -61,6 +61,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditLayout = QtWidgets.QVBoxLayout()
 
         self.messageOptionsFrame = QtWidgets.QGroupBox("Message Options")
+        self.messageOptionsFrame.setMaximumWidth(700)
 
         self.messageOptionsFrame.setStyleSheet(f"""
         QGroupBox {{
@@ -80,6 +81,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditLayout.addWidget(self.messageOptionsFrame)
 
         self.messageEditor = QtWidgets.QPlainTextEdit()
+        self.messageEditor.setMaximumWidth(700)
         self.messageEditor.textChanged.connect(self.messageTextChanged)
         self.messageEditLayout.addWidget(self.messageEditor)
 

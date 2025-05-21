@@ -2,7 +2,9 @@ import struct
 import string
 
 from zeldaEnums import *
+from zeldaDicts import *
 from io import BytesIO
+from PyQt6 import  QtGui, QtWidgets
 
 def getMessageList(tableData, stringData, mode):
     messageRecordList = []
@@ -48,36 +50,37 @@ def convertMessageList(messagelist, mode):
 
     for mes in messagelist:
 
-        if mode == MessageMode.Majora:
-            return (None, None)
-        else:
-            typePos = (mes.boxType << 4) | mes.boxPosition
+        typePos = (mes.boxType << 4) | mes.boxPosition
 
-            records.append(mes.messageId.to_bytes(2, 'big'))
-            records.append(typePos.to_bytes(1, 'big'))
-            records.append(padding.to_bytes(1, 'big'))
-            records.append(offset.to_bytes(4, 'big'))
+        records.append(mes.messageId.to_bytes(2, 'big'))
+        records.append(typePos.to_bytes(1, 'big'))
+        records.append(padding.to_bytes(1, 'big'))
+        records.append(offset.to_bytes(4, 'big'))
 
-            stringData = mes.save()
-            total_length = len(stringData)
-            padding_needed = (4 - (total_length % 4)) % 4
+        stringData = mes.save()
+
+        if stringData is None:
+            return (1, mes.messageId, mes.errors)
+
+        totalLen = len(stringData)
+        paddingNeeded = (4 - (totalLen % 4)) % 4
+
+        if paddingNeeded > 0:
+            stringData += b'\x00' * paddingNeeded
         
-            if padding_needed > 0:
-                stringData += b'\x00' * padding_needed
-            
-            strings.append(stringData)
-            offset += total_length + padding_needed
+        strings.append(stringData)
+        offset += totalLen + paddingNeeded
 
     records.append(b'\xFF' * 2)
     records.append(b'\x00' * 6)
 
     # Pad strings to be divisible by 16
-    total_strings_length = sum(len(string) for string in strings)
-    strings_padding_needed = (16 - (total_strings_length % 16)) % 16
-    if strings_padding_needed > 0:
-        strings.append(b'\x00' * strings_padding_needed)
+    totalStringsLen = sum(len(string) for string in strings)
+    stringsPaddingNeeded = (16 - (totalStringsLen % 16)) % 16
+    if stringsPaddingNeeded > 0:
+        strings.append(b'\x00' * stringsPaddingNeeded)
 
-    return (b''.join(records), b''.join(strings))
+    return (0, b''.join(records), b''.join(strings))
 
 
 def formatMessageID(messageId):
@@ -219,7 +222,12 @@ class MessageOcarina(Message):
             
             elif code == OcarinaControlCode.SOUND:
                 sound_id = self._get_u16()
-                code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
+                sound_name = sfxOcarina.get(sound_id)
+
+                if sound_name:
+                    code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_name[0]}"
+                else:
+                    code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
             
             elif code == OcarinaControlCode.SPEED:
                 speed = self._get_u8()
@@ -241,9 +249,10 @@ class MessageOcarina(Message):
                 return list(f"\n<{OcarinaControlCode.NEW_BOX.name}>\n")
             
             elif code == OcarinaControlCode.BACKGROUND:
-                id1 = self._get_byte()
-                id2 = self._get_byte()
-                id3 = self._get_byte()
+                id1 = self._get_u8()
+                id2 = self._get_u8()
+                id3 = self._get_u8()
+
                 background_id = (id1 << 16) | (id2 << 8) | id3
                 code_insides = f"{OcarinaControlCode.BACKGROUND.name}:{background_id}"
             
@@ -266,8 +275,8 @@ class MessageOcarina(Message):
             if self.textData[i] not in '<>':
                 try:
                     # Check if character is a valid control code
-                    control_code = OcarinaControlCode[self.textData[i]]
-                    data.append(control_code.value)
+                    controlCode = OcarinaControlCode[self.textData[i]]
+                    data.append(controlCode.value)
                 except:
                     if self.textData[i] == '\n':
                         data.append(OcarinaControlCode.LINE_BREAK.value)
@@ -287,25 +296,25 @@ class MessageOcarina(Message):
             # We've got a control code
             else:
                 # Buffer for the control code
-                control_code = []
+                controlCode = []
                 
                 while i < len(self.textData) - 1 and self.textData[i] != '>':
                     # Add code chars to the buffer
-                    control_code.append(self.textData[i])
+                    controlCode.append(self.textData[i])
                     # Increase i so we can skip the code when we're done parsing
                     i += 1
                     
-                if not control_code:
+                if not controlCode:
                     i += 1
                     continue
                     
                 # Remove the < chevron from the beginning of the code
-                control_code.pop(0)
+                controlCode.pop(0)
                 
-                parsed_code = ''.join(control_code)
-                parsed_fixed = parsed_code.split(':')[0].replace(" ", "_").upper()
+                parsedCode = ''.join(controlCode)
+                parsedFixed = parsedCode.split(':')[0].replace(" ", "_").upper()
                 
-                if parsed_fixed in (OcarinaControlCode.NEW_BOX.name, OcarinaControlCode.DELAY.name):
+                if parsedFixed in (OcarinaControlCode.NEW_BOX.name, OcarinaControlCode.DELAY.name):
                     if data and data[-1] == 0x01:
                         data.pop()
                         
@@ -315,16 +324,13 @@ class MessageOcarina(Message):
                         if s == '\n':
                             i += len('\n')  # Skips next linebreak
                 
-                control_code_bytes = self._convertControlCode(parsed_code.split(':'), self.errors)
-                data.extend(control_code_bytes)
+                controlCodeBytes = self._convertControlCode(parsedCode.split(':'), self.errors)
+                data.extend(controlCodeBytes)
                 i += 1
                 
         data.append(OcarinaControlCode.END.value)
-        
-        #if show_errors and self.errors:
-        #    QtWidgets.QMessageBox.information(self, 'Error', f"Errors parsing message {self.messageId}:\n" + "\n".join(errors))
-        
-        return bytes(data) if not self.errors else bytes()
+
+        return bytes(data) if not self.errors else None
 
     def _convertControlCode(self, code, errors):
         output = []
@@ -339,9 +345,9 @@ class MessageOcarina(Message):
                 
             elif code[0] == "JUMP":
                 output.append(OcarinaControlCode.JUMP.value)
-                jump_id = int(code[1], 16) 
-                jump_bytes = struct.pack(">H", jump_id)  
-                output.extend(jump_bytes)
+                jumpId = int(code[1], 16) 
+                jumpBytes = struct.pack(">H", jumpId)  
+                output.extend(jumpBytes)
                 
             elif code[0] in ["DELAY", "FADE", "SHIFT", "SPEED"]:
                 output.append(OcarinaControlCode[code[0]].value)
@@ -350,8 +356,8 @@ class MessageOcarina(Message):
             elif code[0] == "FADE2":
                 output.append(OcarinaControlCode[code[0]].value)
                 fade_amount = int(code[1])
-                fade_bytes = struct.pack(">h", fade_amount) 
-                output.extend(fade_bytes)
+                fadeBytes = struct.pack(">h", fade_amount) 
+                output.extend(fadeBytes)
                 
             elif code[0] == "ICON":
                 output.append(OcarinaControlCode[code[0]].value)
@@ -359,9 +365,9 @@ class MessageOcarina(Message):
                 
             elif code[0] == "BACKGROUND":
                 output.append(OcarinaControlCode.BACKGROUND.value)
-                background_id = int(code[1])
-                background_bytes = struct.pack(">I", background_id) 
-                output.extend(background_bytes[1:])
+                backgroundId = int(code[1])
+                backgroundBytes = struct.pack(">I", backgroundId) 
+                output.extend(backgroundBytes[1:])
                 
             elif code[0] == "HIGH_SCORE":
                 output.append(OcarinaControlCode.HIGH_SCORE.value)
@@ -369,22 +375,22 @@ class MessageOcarina(Message):
                 
             elif code[0] == "SOUND":
                 output.append(OcarinaControlCode.SOUND.value)
-                sound_value = 0
+                soundValue = findSFXByname(sfxOcarina, code[1])
+
+                if soundValue == None:
+                    try:
+                        soundValue = int(code[1])
+                    except ValueError:
+                        errors.append(f"{code[1]} is not a valid sound.")
+                        soundValue = 0
                 
-                try:
-                    sound_value = int(code[1])
-                except ValueError:
-                    errors.append(f"{code[1]} is not a valid sound.")
-                    sound_value = 0
-                
-                sound_bytes = struct.pack(">h", sound_value) 
-                output.extend(sound_bytes)
+                output.extend(struct.pack(">H", soundValue))
                 
             else:
                 try:
-                    color_value = OcarinaMsgColor[code[0]].value
+                    colorValue = OcarinaMsgColor[code[0]].value
                     output.append(OcarinaControlCode.COLOR.value)
-                    output.append(color_value)
+                    output.append(colorValue)
                 except KeyError:
                     try:
                         output.append(OcarinaControlCode[code[0]].value)
@@ -397,6 +403,7 @@ class MessageOcarina(Message):
         return output
 
 class MessageMajora(Message):
+    
     def __init__(self, reader, record, mode):
 
         super().__init__(reader, record, mode)
@@ -439,7 +446,14 @@ class MessageMajora(Message):
                     char_data.append(' ')
                 # Stressed characters
                 elif 0x80 <= cur_byte <= 0xAF:
-                    char_data.append(MajoraControlCode(cur_byte).name[0])
+                    if cur_byte == '¡':
+                        char_data.append(0xAD)
+                    elif cur_byte == '¿':
+                        char_data.append(0xAE)
+                    elif cur_byte == 'ª':
+                        char_data.append(0xAF)
+                    else:
+                        char_data.append(MajoraControlCode(cur_byte).name[0])
                 # ASCII-mapped characters
                 elif (
                     (0x20 <= cur_byte < 0x7F)
@@ -500,7 +514,12 @@ class MessageMajora(Message):
 
             elif code == MajoraControlCode.SOUND:
                 sound_id = self._get_u16()
-                code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
+                sound_name = sfxMajora.get(sound_id)
+
+                if sound_name:
+                    code_insides = f"{MajoraControlCode.SOUND.name}:{sound_name[0]}"
+                else:
+                    code_insides = f"{MajoraControlCode.SOUND.name}:{sound_id}"
 
             else:
                 code_insides = code.name
@@ -512,4 +531,124 @@ class MessageMajora(Message):
         return code_bank
 
     def save(self):
-        return bytes()
+        data = bytearray()
+        self.errors = []
+
+        # Add initial data
+        data.append(self.boxType)
+        data.append(self.boxPosition)
+        data.append(self.majoraIcon)
+
+        data.extend(struct.pack('>H', self.majoraJumpTo))
+        data.extend(struct.pack('>h', self.majoraFirstPrice))
+        data.extend(struct.pack('>h', self.majoraSecondPrice))
+
+        data.extend([0xFF, 0xFF])
+
+        i = 0
+        while i < len(self.textData):
+            # Not a control code, copy char to output buffer
+            if self.textData[i] not in '<>':
+                if self.textData[i] == '¡':
+                    data.append(0xAD)
+                elif self.textData[i] == '¿':
+                    data.append(0xAE)
+                elif self.textData[i] == 'ª':
+                    data.append(0xAF)
+                elif self.textData[i] in [e.name for e in MajoraControlCode]:
+                    data.append(MajoraControlCode[self.textData[i]].value)
+                elif self.textData[i] == '\n':
+                    data.append(MajoraControlCode.LINE_BREAK.value)
+                elif self.textData[i] != '\r':
+                    data.append(ord(self.textData[i]))
+                i += 1
+                continue
+                
+            # Control code end tag. This should never be encountered on its own.
+            elif self.textData[i] == '>':
+                self.errors.append("Message formatting is not valid: found stray >")
+                i += 1
+            # We've got a control code
+            else:
+                # Buffer for the control code
+                controlCode = []
+                
+                while i < len(self.textData) - 1 and self.textData[i] != '>':
+                    # Add code chars to the buffer
+                    controlCode.append(self.textData[i])
+                    # Increase i so we can skip the code when we're done parsing
+                    i += 1
+                    
+                if not controlCode:
+                    i += 1
+                    continue
+                    
+                # Remove the < chevron from the beginning of the code
+                controlCode.pop(0)
+                
+                parsedCode = ''.join(controlCode)
+                pasedFixed = parsedCode.split(':')[0].replace(" ", "_").upper()
+                
+                if pasedFixed in [
+                    MajoraControlCode.NEW_BOX.name, 
+                    MajoraControlCode.DELAY_END.name,
+                    MajoraControlCode.NEW_BOX_CENTER.name         
+                    ]:
+                    if data and data[-1] == 0x11:
+                        data.pop()
+                        
+                    if len(self.textData) > i + len('\n'):
+                        s = self.textData[i + 1]
+
+                        if s == '\n':
+                            i += len('\n')
+                
+                controlCodeBytes = self._convertControlCode(parsedCode.split(':'), self.errors)
+                data.extend(controlCodeBytes)
+                i += 1
+                
+        data.append(MajoraControlCode.END.value)
+        
+        return bytes(data) if not self.errors else None
+
+    def _convertControlCode(self, code, errors):
+        output = []
+
+        try:
+            # Convert all codes to uppercase and replace spaces with underscores
+            code = [c.replace(" ", "_").upper() for c in code]
+
+            if code[0] == "SHIFT":
+                output.append(MajoraControlCode.SHIFT.value)
+                output.append(int(code[1]))
+
+            elif code[0] in ["DELAY", "DELAY_NEWBOX", "DELAY_END", "FADE"]:
+                output.append(MajoraControlCode[code[0]].value)
+                output.extend(struct.pack('>H', int(code[1])))
+
+            elif code[0] == "SOUND":
+                output.append(MajoraControlCode.SOUND.value)
+                soundValue = findSFXByname(sfxMajora, code[1])
+
+                if soundValue == None:
+                    try:
+                        soundValue = int(code[1])
+                    except ValueError:
+                        errors.append(f"{code[1]} is not a valid sound.")
+                        soundValue = 0
+
+                output.extend(struct.pack('>H', soundValue))
+
+            else:
+                try:
+                    output.append(MajoraMsgColor[code[0]].value)
+                except KeyError:
+                    try:
+                        output.append(MajoraControlCode[code[0]].value)
+                    except KeyError:
+                        errors.append(f"{code[0]} is not a valid control code.")
+
+        except Exception:
+            pass
+
+        return output
