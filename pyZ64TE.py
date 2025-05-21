@@ -6,7 +6,7 @@ import zeldaMessage
 from zeldaEnums import *
 from PyQt6 import QtGui, QtWidgets
 
-class mainEditorWindow(QtWidgets.QMainWindow):
+class MainEditorWindow(QtWidgets.QMainWindow):
 
     def createMenuBar(self):
 
@@ -85,7 +85,7 @@ class mainEditorWindow(QtWidgets.QMainWindow):
         self.CreateEditor()
 
     def CreateEditor(self):
-        self.messageEditor = textEditorWidget.textEditorWidget(self)
+        self.messageEditor = textEditorWidget.TextEditorWidget(self)
         self.setCentralWidget(self.messageEditor)
 
     def HandleCloseApplication(self):
@@ -176,7 +176,6 @@ class mainEditorWindow(QtWidgets.QMainWindow):
                     else:
                         self._changeStatusBarEnableStatus(True)
                         self.messageEditor.populateEditor(messageList, mode)
-        return
     
     def _changeStatusBarEnableStatus(self, set):
 
@@ -233,7 +232,7 @@ def main():
     
     app = QtWidgets.QApplication([])
     
-    mainwindow = mainEditorWindow()
+    mainwindow = MainEditorWindow()
     mainwindow.show()
     app.exec()
 
