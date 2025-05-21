@@ -410,8 +410,8 @@ class Message:
                 
             elif code[0] == "JUMP":
                 output.append(OcarinaControlCode.JUMP.value)
-                jump_id = int(code[1], 16)  # Parse hex number
-                jump_bytes = struct.pack(">H", jump_id)  # Big endian short
+                jump_id = int(code[1], 16) 
+                jump_bytes = struct.pack(">H", jump_id)  
                 output.extend([jump_bytes[0], jump_bytes[1]])
                 
             elif code[0] in ["DELAY", "FADE", "SHIFT", "SPEED"]:
@@ -421,7 +421,7 @@ class Message:
             elif code[0] == "FADE2":
                 output.append(OcarinaControlCode[code[0]].value)
                 fade_amount = int(code[1])
-                fade_bytes = struct.pack(">h", fade_amount)  # Big endian short
+                fade_bytes = struct.pack(">h", fade_amount) 
                 output.extend([fade_bytes[0], fade_bytes[1]])
                 
             elif code[0] == "ICON":
@@ -431,7 +431,7 @@ class Message:
             elif code[0] == "BACKGROUND":
                 output.append(OcarinaControlCode.BACKGROUND.value)
                 background_id = int(code[1])
-                background_bytes = struct.pack(">I", background_id)  # Big endian int
+                background_bytes = struct.pack(">I", background_id) 
                 output.extend([background_bytes[1], background_bytes[2], background_bytes[3]])
                 
             elif code[0] == "HIGH_SCORE":
@@ -448,7 +448,7 @@ class Message:
                     errors.append(f"{code[1]} is not a valid sound.")
                     sound_value = 0
                 
-                sound_bytes = struct.pack(">h", sound_value)  # Big endian short
+                sound_bytes = struct.pack(">h", sound_value) 
                 output.extend([sound_bytes[0], sound_bytes[1]])
                 
             else:
