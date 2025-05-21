@@ -2,7 +2,6 @@ import struct
 import string
 
 from zeldaEnums import *
-from PyQt6 import QtGui, QtWidgets
 from io import BytesIO
 
 def getMessageList(tableData, stringData, mode):
@@ -158,8 +157,8 @@ class MessageOcarina(Message):
                     read_control_code = True
 
             if not read_control_code:
+                # Never actually used in-game. Appears blank.
                 if cur_byte == 0x7F:
-                    # Never actually used in-game. Appears blank.
                     char_data.append(' ')
                 # Stressed characters
                 elif 0x80 <= cur_byte <= 0x9E:
@@ -435,8 +434,8 @@ class MessageMajora(Message):
                     read_control_code = True
 
             if not read_control_code:
+                # Never actually used in-game. Appears blank.
                 if cur_byte == 0x7F:
-                    # Never actually used in-game. Appears blank.
                     char_data.append(' ')
                 # Stressed characters
                 elif 0x80 <= cur_byte <= 0xAF:
