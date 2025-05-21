@@ -4,6 +4,7 @@ import textEditorWidget
 import zeldaMessage
 
 from zeldaEnums import *
+from pathlib import Path
 from PyQt6 import QtGui, QtWidgets
 
 class MainEditorWindow(QtWidgets.QMainWindow):
@@ -98,11 +99,8 @@ class MainEditorWindow(QtWidgets.QMainWindow):
     def _saveFiles(self, path1, path2):
         records, strings = self._getDataToSave()
 
-        with open(path1, 'wb') as f:
-            f.write(records)
-
-        with open(path2, 'wb') as f:
-            f.write(strings)        
+        Path(path1).write_bytes(records)
+        Path(path2).write_bytes(strings)      
 
     def handleSave(self):
         #if self.destPath2 is None, then assume we're saving to ROM.
@@ -121,8 +119,7 @@ class MainEditorWindow(QtWidgets.QMainWindow):
             QtWidgets.QFileDialog.Option.ShowDirsOnly | QtWidgets.QFileDialog.Option.DontResolveSymlinks
         )
 
-        if folderPath == '': return
-        else:     
+        if folderPath != '':
             path1 = os.path.join(folderPath, f"{SAVE_TABLE_FILENAME}.tbl")
             path2 = os.path.join(folderPath, f"{SAVE_STRINGS_FILENAME}.tbl")
             self._saveFiles(path1, path2)      
@@ -146,9 +143,9 @@ class MainEditorWindow(QtWidgets.QMainWindow):
 
             if tableFileName != '':
                 stringFileName = QtWidgets.QFileDialog.getOpenFileName(self, 
-                                                                'Choose the String Data...', 
-                                                                '', 
-                                                                'String Data (*.bin);;All Files(*)')[0]
+                                                                    'Choose the String Data...', 
+                                                                    '', 
+                                                                    'String Data (*.bin);;All Files(*)')[0]
 
                 if stringFileName != '':
                     msgBox = QtWidgets.QMessageBox(self)
@@ -160,11 +157,8 @@ class MainEditorWindow(QtWidgets.QMainWindow):
                     mode = msgBox.exec()
                     mode -= 2
 
-                    tableFile = open(tableFileName, "rb")
-                    stringFile = open(stringFileName, "rb")
-
-                    tableData = tableFile.read()
-                    stringData = stringFile.read()
+                    tableData = Path(tableFileName).read_bytes()
+                    stringData = Path(stringFileName).read_bytes()
 
                     self.destPath1 = tableFileName
                     self.destPath2 = stringFileName
