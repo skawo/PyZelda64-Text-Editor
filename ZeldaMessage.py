@@ -106,25 +106,15 @@ class TableRecord:
         reader.read(1)
         self.offset = struct.unpack('>I', reader.read(4))[0] & 0x00FFFFFF
 
-class MessageOcarina:
+class Message:
     def __init__(self, reader, record, mode):
-
         self.mode = mode
-
-        if reader is None or record is None:
-            self.messageId = 0
-            self.boxType = 0
-            self.boxPosition = 0
-            self.textData = ""
-            return
-
+        self.messageId = 0
+        self.boxType = 0
+        self.boxPosition = 0
+        self.textData = ""
         self.reader = reader
-        self.messageId = record.messageId & 0xFFFF
-        self.boxType = record.boxType
-        self.boxPosition = record.boxPosition
-        self.textData = self._getStringData()
-
-        del self.reader
+        self.record = record
 
     def _get_u8(self):
         return self.reader.read(1)[0]
@@ -139,7 +129,22 @@ class MessageOcarina:
         return struct.unpack('>h', self.reader.read(2))[0]
     
     def _get_s32(self):
-        return struct.unpack('>i', self.reader.read(4))[0]   
+        return struct.unpack('>i', self.reader.read(4))[0]  
+
+class MessageOcarina(Message):
+    def __init__(self, reader, record, mode):
+
+        super().__init__(reader, record, mode)
+
+        if self.reader is not None and self.record is not None:
+            self.reader = reader
+            self.messageId = record.messageId & 0xFFFF
+            self.boxType = record.boxType
+            self.boxPosition = record.boxPosition
+            self.textData = self._getStringData()
+        
+        del self.reader 
+        del self.record
 
     def _getStringData(self):
         char_data = []
@@ -393,49 +398,30 @@ class MessageOcarina:
             
         return output
 
-class MessageMajora:
+class MessageMajora(Message):
     def __init__(self, reader, record, mode):
 
-        self.mode = mode
+        super().__init__(reader, record, mode)
 
-        if reader is None or record is None:
-            self.messageId = 0
-            self.boxType = 0
-            self.boxPosition = 0
-            self.textData = ""
+        if self.reader is None or self.record is None:
             self.majoraIcon = 0
             self.majoraJumpTo = 0
             self.majoraFirstPrice = 0
             self.majoraSecondPrice = 0
-            return
+        else:
+            self.reader = reader
+            self.messageId = record.messageId & 0xFFFF
+            self.boxType = self._get_u8()
+            self.boxPosition = self._get_u8() 
+            self.majoraIcon = self._get_u8()
+            self.majoraJumpTo = self._get_u16()
+            self.majoraFirstPrice = self._get_s16()
+            self.majoraSecondPrice = self._get_s16()
+            self._get_u16() # Padding
+            self.textData = self._getStringData()
 
-        self.reader = reader
-        self.messageId = record.messageId & 0xFFFF
-        self.boxType = self._get_u8()
-        self.boxPosition = self._get_u8() 
-        self.majoraIcon = self._get_u8()
-        self.majoraJumpTo = self._get_u16()
-        self.majoraFirstPrice = self._get_s16()
-        self.majoraSecondPrice = self._get_s16()
-        self._get_u16() # Padding
-        self.textData = self._getStringData()
-
-        del self.reader
-
-    def _get_u8(self):
-        return self.reader.read(1)[0]
-    
-    def _get_u16(self):
-        return struct.unpack('>H', self.reader.read(2))[0]
-    
-    def _get_u32(self):
-        return struct.unpack('>I', self.reader.read(4))[0]
-    
-    def _get_s16(self):
-        return struct.unpack('>h', self.reader.read(2))[0]
-    
-    def _get_s32(self):
-        return struct.unpack('>i', self.reader.read(4))[0]    
+        del self.reader 
+        del self.record 
 
     def _getStringData(self):
         char_data = []
