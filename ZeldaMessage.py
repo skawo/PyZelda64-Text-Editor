@@ -28,7 +28,10 @@ def getMessageList(tableData, stringData, mode):
             stringReader.seek(record.offset)
             start_pos = stringReader.tell()
 
-            mes = Message(stringReader, record, mode)
+            if mode == MessageMode.Majora:
+                mes = MessageMajora(stringReader, record, mode)
+            else:
+                mes = MessageOcarina(stringReader, record, mode)
 
             if stringReader.tell() - start_pos >= MAX_MES_SIZE:
                 return None
@@ -103,7 +106,7 @@ class TableRecord:
         reader.read(1)
         self.offset = struct.unpack('>I', reader.read(4))[0] & 0x00FFFFFF
 
-class Message:
+class MessageOcarina:
     def __init__(self, reader, record, mode):
 
         self.mode = mode
@@ -113,31 +116,14 @@ class Message:
             self.boxType = 0
             self.boxPosition = 0
             self.textData = ""
-
-            if mode == MessageMode.Majora:
-                self.majoraIcon = 0
-                self.majoraJumpTo = 0
-                self.majoraFirstPrice = 0
-                self.majoraSecondPrice = 0
             return
 
         self.reader = reader
-
-        if mode == MessageMode.Majora:
-            self.messageId = record.messageId & 0xFFFF
-            self.boxType = self._get_u8()
-            self.boxPosition = self._get_u8() 
-            self.majoraIcon = self._get_u8()
-            self.majoraJumpTo = self._get_u16()
-            self.majoraFirstPrice = self._get_u16()
-            self.majoraSecondPrice = self._get_u16()
-            self._get_u16() # Padding
-        else:
-            self.messageId = record.messageId & 0xFFFF
-            self.boxType = record.boxType
-            self.boxPosition = record.boxPosition
-
+        self.messageId = record.messageId & 0xFFFF
+        self.boxType = record.boxType
+        self.boxPosition = record.boxPosition
         self.textData = self._getStringData()
+
         del self.reader
 
     def _get_u8(self):
@@ -148,22 +134,23 @@ class Message:
     
     def _get_u32(self):
         return struct.unpack('>I', self.reader.read(4))[0]
+    
+    def _get_s16(self):
+        return struct.unpack('>h', self.reader.read(2))[0]
+    
+    def _get_s32(self):
+        return struct.unpack('>i', self.reader.read(4))[0]   
 
     def _getStringData(self):
         char_data = []
         cur_byte = self._get_u8()
 
-        controlCodeType = MajoraControlCode if self.mode == MessageMode.Majora else OcarinaControlCode
-        func = self._getControlCodeMajora if self.mode == MessageMode.Majora else self._getControlCodeOcarina
-
-        boundByte = 0xAF if self.mode == MessageMode.Majora else 0x9E
-
-        while cur_byte != controlCodeType.END:
+        while cur_byte != OcarinaControlCode.END:
             read_control_code = False
 
-            if cur_byte < 0x7F or cur_byte > boundByte:
-                if cur_byte in controlCodeType:
-                    char_data.extend(func(controlCodeType(cur_byte)))
+            if cur_byte < 0x7F or cur_byte > 0x9E:
+                if cur_byte in OcarinaControlCode:
+                    char_data.extend(self._getControlCode(OcarinaControlCode(cur_byte)))
                     read_control_code = True
 
             if not read_control_code:
@@ -171,8 +158,8 @@ class Message:
                     # Never actually used in-game. Appears blank.
                     char_data.append(' ')
                 # Stressed characters
-                elif 0x80 <= cur_byte <= boundByte:
-                    char_data.append(controlCodeType(cur_byte).name[0])
+                elif 0x80 <= cur_byte <= 0x9E:
+                    char_data.append(OcarinaControlCode(cur_byte).name[0])
                 # ASCII-mapped characters
                 elif (
                     (0x20 <= cur_byte < 0x7F)
@@ -187,64 +174,11 @@ class Message:
             if self.reader.tell() != len(self.reader.getvalue()):
                 cur_byte = self._get_u8()
             else:
-                cur_byte = controlCodeType.END
+                cur_byte = OcarinaControlCode.END
 
         return ''.join(char_data)
     
-    def _getControlCodeMajora(self, code):
-        code_bank = []
-        code_insides = ""
-
-        try:
-            if code in [
-                MajoraControlCode.COLOR_DEFAULT,
-                MajoraControlCode.COLOR_RED,
-                MajoraControlCode.COLOR_GREEN,
-                MajoraControlCode.COLOR_BLUE,
-                MajoraControlCode.COLOR_YELLOW,
-                MajoraControlCode.COLOR_NAVY,
-                MajoraControlCode.COLOR_PINK,
-                MajoraControlCode.COLOR_SILVER,
-                MajoraControlCode.COLOR_ORANGE,
-            ]:
-                code_insides = MajoraMsgColor(code.value).name
-
-            elif code == MajoraControlCode.SHIFT:
-                num_spaces = self._get_u8()
-                code_insides = f"{MajoraControlCode.SHIFT}:{num_spaces}"
-
-            elif code == MajoraControlCode.LINE_BREAK:
-                return list("\n")
-
-            elif code == MajoraControlCode.NEW_BOX:
-                return list(f"\n<{MajoraControlCode.NEW_BOX.name}>\n")
-
-            elif code == MajoraControlCode.NEW_BOX_CENTER:
-                return list(f"\n<{MajoraControlCode.NEW_BOX_CENTER.name}>\n")
-
-            elif code in [
-                MajoraControlCode.DELAY,
-                MajoraControlCode.DELAY_NEWBOX,
-                MajoraControlCode.DELAY_END,
-                MajoraControlCode.FADE,
-            ]:
-                delay = self._get_u16()
-                code_insides = f"{code.name}:{delay}"
-
-            elif code == MajoraControlCode.SOUND:
-                sound_id = self._get_u16()
-                code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
-
-            else:
-                code_insides = code.name
-        except Exception:
-                code_bank.extend(f"<UNK:{code}>")
-                return code_bank
-        
-        code_bank.extend(f"<{code_insides}>")
-        return code_bank
-
-    def _getControlCodeOcarina(self, code):
+    def _getControlCode(self, code):
         code_bank = []
         code_insides = ""
 
@@ -320,12 +254,6 @@ class Message:
         return code_bank       
     
     def save(self):
-        return self._saveMajora() if self.mode == MessageMode.Majora else self._saveOcarina()
-    
-    def _saveMajora(self):
-        return bytes()
-
-    def _saveOcarina(self):
         data = bytearray()
         self.errors = []
         
@@ -384,7 +312,7 @@ class Message:
                         if s == '\n':
                             i += len('\n')  # Skips next linebreak
                 
-                control_code_bytes = self._convertControlCodeOcarina(parsed_code.split(':'), self.errors)
+                control_code_bytes = self._convertControlCode(parsed_code.split(':'), self.errors)
                 data.extend(control_code_bytes)
                 i += 1
                 
@@ -395,7 +323,7 @@ class Message:
         
         return bytes(data) if not self.errors else bytes()
 
-    def _convertControlCodeOcarina(self, code, errors):
+    def _convertControlCode(self, code, errors):
         output = []
         
         try:
@@ -465,3 +393,139 @@ class Message:
             
         return output
 
+class MessageMajora:
+    def __init__(self, reader, record, mode):
+
+        self.mode = mode
+
+        if reader is None or record is None:
+            self.messageId = 0
+            self.boxType = 0
+            self.boxPosition = 0
+            self.textData = ""
+            self.majoraIcon = 0
+            self.majoraJumpTo = 0
+            self.majoraFirstPrice = 0
+            self.majoraSecondPrice = 0
+            return
+
+        self.reader = reader
+        self.messageId = record.messageId & 0xFFFF
+        self.boxType = self._get_u8()
+        self.boxPosition = self._get_u8() 
+        self.majoraIcon = self._get_u8()
+        self.majoraJumpTo = self._get_u16()
+        self.majoraFirstPrice = self._get_s16()
+        self.majoraSecondPrice = self._get_s16()
+        self._get_u16() # Padding
+        self.textData = self._getStringData()
+
+        del self.reader
+
+    def _get_u8(self):
+        return self.reader.read(1)[0]
+    
+    def _get_u16(self):
+        return struct.unpack('>H', self.reader.read(2))[0]
+    
+    def _get_u32(self):
+        return struct.unpack('>I', self.reader.read(4))[0]
+    
+    def _get_s16(self):
+        return struct.unpack('>h', self.reader.read(2))[0]
+    
+    def _get_s32(self):
+        return struct.unpack('>i', self.reader.read(4))[0]    
+
+    def _getStringData(self):
+        char_data = []
+        cur_byte = self._get_u8()
+
+        while cur_byte != MajoraControlCode.END:
+            read_control_code = False
+
+            if cur_byte < 0x7F or cur_byte > 0xAF:
+                if cur_byte in MajoraControlCode:
+                    char_data.extend(self._getControlCode(MajoraControlCode(cur_byte)))
+                    read_control_code = True
+
+            if not read_control_code:
+                if cur_byte == 0x7F:
+                    # Never actually used in-game. Appears blank.
+                    char_data.append(' ')
+                # Stressed characters
+                elif 0x80 <= cur_byte <= 0xAF:
+                    char_data.append(MajoraControlCode(cur_byte).name[0])
+                # ASCII-mapped characters
+                elif (
+                    (0x20 <= cur_byte < 0x7F)
+                    or chr(cur_byte).isalnum()
+                    or chr(cur_byte).isspace()
+                    or chr(cur_byte) in string.punctuation
+                ):
+                    char_data.append(chr(cur_byte))
+                else:
+                    char_data.extend(f"<UNK {cur_byte:X}>")
+
+            if self.reader.tell() != len(self.reader.getvalue()):
+                cur_byte = self._get_u8()
+            else:
+                cur_byte = MajoraControlCode.END
+
+        return ''.join(char_data)
+    
+    def _getControlCode(self, code):
+        code_bank = []
+        code_insides = ""
+
+        try:
+            if code in [
+                MajoraControlCode.COLOR_DEFAULT,
+                MajoraControlCode.COLOR_RED,
+                MajoraControlCode.COLOR_GREEN,
+                MajoraControlCode.COLOR_BLUE,
+                MajoraControlCode.COLOR_YELLOW,
+                MajoraControlCode.COLOR_NAVY,
+                MajoraControlCode.COLOR_PINK,
+                MajoraControlCode.COLOR_SILVER,
+                MajoraControlCode.COLOR_ORANGE,
+            ]:
+                code_insides = MajoraMsgColor(code.value).name
+
+            elif code == MajoraControlCode.SHIFT:
+                num_spaces = self._get_u8()
+                code_insides = f"{MajoraControlCode.SHIFT}:{num_spaces}"
+
+            elif code == MajoraControlCode.LINE_BREAK:
+                return list("\n")
+
+            elif code == MajoraControlCode.NEW_BOX:
+                return list(f"\n<{MajoraControlCode.NEW_BOX.name}>\n")
+
+            elif code == MajoraControlCode.NEW_BOX_CENTER:
+                return list(f"\n<{MajoraControlCode.NEW_BOX_CENTER.name}>\n")
+
+            elif code in [
+                MajoraControlCode.DELAY,
+                MajoraControlCode.DELAY_NEWBOX,
+                MajoraControlCode.DELAY_END,
+                MajoraControlCode.FADE,
+            ]:
+                delay = self._get_u16()
+                code_insides = f"{code.name}:{delay}"
+
+            elif code == MajoraControlCode.SOUND:
+                sound_id = self._get_u16()
+                code_insides = f"{OcarinaControlCode.SOUND.name}:{sound_id}"
+
+            else:
+                code_insides = code.name
+        except Exception:
+                code_bank.extend(f"<UNK:{code}>")
+                return code_bank
+        
+        code_bank.extend(f"<{code_insides}>")
+        return code_bank
+
+    def save(self):
+        return bytes()
