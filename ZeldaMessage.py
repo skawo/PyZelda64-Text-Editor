@@ -56,7 +56,7 @@ def convertMessageList(messagelist, mode):
             records.append(padding.to_bytes(1, 'big'))
             records.append(offset.to_bytes(4, 'big'))
 
-            stringData = bytes(mes.save())
+            stringData = mes.save()
             total_length = len(stringData)
             padding_needed = (4 - (total_length % 4)) % 4
         
@@ -323,10 +323,10 @@ class Message:
         return self._saveMajora() if self.mode == MessageMode.Majora else self._saveOcarina()
     
     def _saveMajora(self):
-        return []
+        return bytes()
 
     def _saveOcarina(self):
-        data = []
+        data = bytearray()
         self.errors = []
         
         i = 0
@@ -393,7 +393,7 @@ class Message:
         #if show_errors and self.errors:
         #    QtWidgets.QMessageBox.information(self, 'Error', f"Errors parsing message {self.messageId}:\n" + "\n".join(errors))
         
-        return data if not self.errors else []
+        return bytes(data) if not self.errors else bytes()
 
     def _convertControlCodeOcarina(self, code, errors):
         output = []
