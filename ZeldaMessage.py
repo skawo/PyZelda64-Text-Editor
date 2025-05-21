@@ -11,7 +11,7 @@ def getMessageList(tableData, stringData, mode):
     with BytesIO(tableData) as tableReader, BytesIO(stringData) as stringReader:
         while True:
             peek_bytes = tableReader.read(2)
-            if not peek_bytes or struct.unpack('>h', peek_bytes)[0] == -1:
+            if not peek_bytes or struct.unpack('>H', peek_bytes)[0] == 0xFFFF:
                 tableReader.seek(-2, 1)
                 break
                 

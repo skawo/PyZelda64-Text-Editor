@@ -1,6 +1,8 @@
 import zeldaMessage
 
 from zeldaEnums import *
+from hSpinBox import InputBox
+
 from PyQt6 import  QtGui, QtWidgets
 from PyQt6.QtCore import Qt
 
@@ -236,19 +238,25 @@ class TextEditorWidget(QtWidgets.QWidget):
 
     def addMessageClicked(self):
         if self.messageList is not None:
-            input, done = QtWidgets.QInputDialog.getText(self, ' ', 'New Message ID (hex):')
+            dbox = InputBox(self.parent, InputBox.Type_HexSpinBox)
+            result = dbox.show(' ', 'New Message ID?', 0, 0, 0xFFFF)
 
-            if not done:
+            if result != QtWidgets.QDialog.DialogCode.Accepted:
                 return
 
             try:
-                id = int(input, 16)
+                id = dbox.spinbox.value()
                 msg = self.getMessageById(id)
                 if msg is not None:
                     QtWidgets.QMessageBox.information(self, 'Error', 'Message ID already exists.')
                 else:
                     self.addMsgRow(self.messageTable.rowCount() - 1, id, "")     
-                    message = zeldaMessage.Message(None, None, self.messageMode)
+
+                    if self.messageMode == MessageMode.Majora:
+                        message = zeldaMessage.MessageMajora(None, None, self.messageMode) 
+                    else:
+                        message = zeldaMessage.MessageOcarina(None, None, self.messageMode)
+
                     message.messageId = id
                     self.messageList.append(message)  
                     self.messageTable.selectRow(self.messageTable.rowCount() - 1)    
@@ -257,14 +265,15 @@ class TextEditorWidget(QtWidgets.QWidget):
                 QtWidgets.QMessageBox.information(self, 'Error', 'Invalid message ID.')
 
     def changeIDClicked(self):
-        if self.messageList is not None:
-            input, done = QtWidgets.QInputDialog.getText(self, ' ', 'New Message ID (hex):')
+        if self.messageList is not None and self.curMessage is not None:
+            dbox = InputBox(self, InputBox.Type_HexSpinBox)
+            result = dbox.show(' ', 'New Message ID?', self.curMessage.messageId, 0, 0xFFFF)
 
-            if not done:
+            if result != QtWidgets.QDialog.DialogCode.Accepted:
                 return
             
             try:
-                id = int(input, 16)
+                id = dbox.spinbox.value()
                 msg = self.getMessageById(id)
                 if msg is not None:
                     QtWidgets.QMessageBox.information(self, 'Error', 'Message ID already exists.')  
