@@ -392,7 +392,7 @@ class MessageOcarina(Message):
                 output.append(OcarinaControlCode.SOUND.value)
                 soundValue = findInDictByName(sfxOcarina, code[1])
 
-                if soundValue == None:
+                if soundValue is None:
                     try:
                         soundValue = int(code[1])
                     except ValueError:
@@ -651,7 +651,7 @@ class MessageMajora(Message):
                 output.append(MajoraControlCode.SOUND.value)
                 soundValue = findInDictByName(sfxMajora, code[1])
 
-                if soundValue == None:
+                if soundValue is None:
                     try:
                         soundValue = int(code[1])
                     except ValueError:
