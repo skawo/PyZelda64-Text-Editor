@@ -386,7 +386,7 @@ class MessageOcarina(Message):
                 
             elif code[0] == "SOUND":
                 output.append(OcarinaControlCode.SOUND.value)
-                soundValue = findSFXByname(sfxOcarina, code[1])
+                soundValue = findInDictByName(sfxOcarina, code[1])
 
                 if soundValue == None:
                     try:
@@ -464,7 +464,11 @@ class MessageMajora(Message):
                     elif cur_byte == 'ª':
                         char_data.append(0xAF)
                     else:
-                        char_data.append(MajoraControlCode(cur_byte).name[0])
+                        try:
+                            char_data.append(MajoraControlCode(cur_byte).name[0])
+                        except Exception:
+                            char_data.extend(f"<UNK {cur_byte:X}>")
+
                 # ASCII-mapped characters
                 elif (
                     (0x20 <= cur_byte < 0x7F)
@@ -641,7 +645,7 @@ class MessageMajora(Message):
 
             elif code[0] == "SOUND":
                 output.append(MajoraControlCode.SOUND.value)
-                soundValue = findSFXByname(sfxMajora, code[1])
+                soundValue = findInDictByName(sfxMajora, code[1])
 
                 if soundValue == None:
                     try:

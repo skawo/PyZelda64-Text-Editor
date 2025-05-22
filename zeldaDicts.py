@@ -29,7 +29,7 @@ try:
 except Exception:
     pass
 
-def findSFXByname(dictionary, sfxName):
+def findInDictByName(dictionary, sfxName):
     for key, value in dictionary.items():
         if isinstance(value, tuple) and value[0] == sfxName:
             return key

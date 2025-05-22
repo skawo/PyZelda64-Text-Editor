@@ -116,7 +116,7 @@ class MainEditorWindow(QtWidgets.QMainWindow):
             errors, data1, data2 = result
             
             if errors == 1:
-                QMessageBox.information(self, 'Error', f"Errors parsing message {zeldaMessage.formatMessageID(data1)}:\n" + "\n".join(data2))
+                QMessageBox.warning(self, 'Error', f"Errors parsing message {zeldaMessage.formatMessageID(data1)}:\n" + "\n".join(data2))
                 self.thread_result = (None, None)
             else:
                 self.thread_result = (data1, data2)
@@ -185,10 +185,10 @@ class MainEditorWindow(QtWidgets.QMainWindow):
                 if stringFileName != '':
                     msgBox = QtWidgets.QMessageBox(self)
                     msgBox.setWindowTitle(" ")
-                    msgBox.setText("These files are...?")
-                    msgBox.addButton("Ocarina", QtWidgets.QMessageBox.ButtonRole.NoRole)
-                    msgBox.addButton("Majora", QtWidgets.QMessageBox.ButtonRole.NoRole)
-                    msgBox.addButton("Credits", QtWidgets.QMessageBox.ButtonRole.NoRole)
+                    msgBox.setText("Select the file type:")
+                    msgBox.addButton("Ocarina", QMessageBox.ButtonRole.NoRole)
+                    msgBox.addButton("Majora", QMessageBox.ButtonRole.NoRole)
+                    msgBox.addButton("Credits", QMessageBox.ButtonRole.NoRole)
                     mode = msgBox.exec()
                     mode -= 2
 
@@ -201,7 +201,7 @@ class MainEditorWindow(QtWidgets.QMainWindow):
                     messageList = zeldaMessage.getMessageList(tableData, stringData, mode)
                     
                     if messageList is None:
-                        QtWidgets.QMessageBox.information(self, 'Error', 'An error occurred while parsing the data.')
+                        QMessageBox.information(self, 'Error', 'An error occurred while parsing the data. Are you sure you chose the right game?')
                     else:
                         self._changeStatusBarEnableStatus(True)
                         self.messageEditor.populateEditor(messageList, mode)

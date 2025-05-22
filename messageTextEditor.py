@@ -5,6 +5,7 @@ from PyQt6.QtGui import QKeySequence
 
 from zeldaEnums import *
 from zeldaDicts import *
+from contextMenuData import *
 
 class CustomPlainTextEdit(QtWidgets.QPlainTextEdit):
     def __init__(self, parent=None):
