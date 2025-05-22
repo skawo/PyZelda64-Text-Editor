@@ -4,6 +4,11 @@ MAX_MES_SIZE = 1280
 SAVE_TABLE_FILENAME = "message_data_static_NES"
 SAVE_STRINGS_FILENAME = "message_data_static_NES"
 
+class ParseErrors(IntEnum):
+    NoError = 0
+    Parse = 1
+    Length = 2
+
 class DestinationMode(IntEnum):
     Files = 0
     ROM = 1

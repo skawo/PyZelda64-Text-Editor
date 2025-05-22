@@ -115,11 +115,12 @@ class MainEditorWindow(QtWidgets.QMainWindow):
             progress.close()
             errors, data1, data2 = result
             
-            if errors == 1:
+            if errors == ParseErrors.Parse:
                 QMessageBox.warning(self, 'Error', f"Errors parsing message {zeldaMessage.formatMessageID(data1)}:\n" + "\n".join(data2))
-                self.thread_result = (None, None)
-            else:
-                self.thread_result = (data1, data2)
+            elif errors == ParseErrors.Length:
+                QMessageBox.warning(self, 'Error', f"Message ID {zeldaMessage.formatMessageID(data1)} is too long.")
+            
+            self.thread_result = (data1, data2) if errors == ParseErrors.NoError else (None, None)
         
         self.worker.progress.connect(handle_progress)
         self.worker.finished.connect(handle_result)

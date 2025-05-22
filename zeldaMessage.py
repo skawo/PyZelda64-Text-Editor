@@ -67,9 +67,13 @@ def convertMessageList(messagelist, mode, progress_callback=None):
         stringData = mes.save()
 
         if stringData is None:
-            return (1, mes.messageId, mes.errors)
+            return (ParseErrors.Parse, mes.messageId, mes.errors)
 
         totalLen = len(stringData)
+
+        if totalLen >= MAX_MES_SIZE:
+            return (ParseErrors.Length, mes.messageId, mes.errors)
+
         paddingNeeded = (4 - (totalLen % 4)) % 4
 
         if paddingNeeded > 0:
