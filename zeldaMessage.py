@@ -1,10 +1,12 @@
 import struct
 import string
 
+import zeldaMessagePreview
+
 from zeldaEnums import *
 from zeldaDicts import *
 from io import BytesIO
-from PyQt6 import  QtGui, QtWidgets
+from PyQt6 import QtGui, QtWidgets
 
 def getMessageList(tableData, stringData, mode):
     messageRecordList = []
@@ -354,11 +356,7 @@ class MessageOcarina(Message):
             # Convert all codes to uppercase and replace spaces with underscores
             code = [c.replace(" ", "_").upper() for c in code]
             
-            if code[0] == "PIXELS_RIGHT":
-                output.append(OcarinaControlCode.SHIFT.value)
-                output.append(int(code[1]))
-                
-            elif code[0] == "JUMP":
+            if code[0] == "JUMP":
                 output.append(OcarinaControlCode.JUMP.value)
                 jumpId = int(code[1], 16) 
                 jumpBytes = struct.pack(">H", jumpId)  
@@ -366,17 +364,35 @@ class MessageOcarina(Message):
                 
             elif code[0] in ["DELAY", "FADE", "SHIFT", "SPEED"]:
                 output.append(OcarinaControlCode[code[0]].value)
-                output.append(int(code[1]))
+
+                val = int(code[1])
+
+                if val > 255: 
+                    val = 0
+                    self.errors.append(f"Value for tag {code[0]} too large.")
+
+                output.append(val)
                 
             elif code[0] == "FADE2":
                 output.append(OcarinaControlCode[code[0]].value)
                 fade_amount = int(code[1])
+
+                if fade_amount > 65535: 
+                    self.errors.append(f"Value for tag {code[0]} too large.")
+
                 fadeBytes = struct.pack(">h", fade_amount) 
                 output.extend(fadeBytes)
                 
             elif code[0] == "ICON":
                 output.append(OcarinaControlCode[code[0]].value)
-                output.append(OcarinaIcon[code[1]].value)
+
+                try:
+                    icon = OcarinaIcon[code[1]].value
+                except Exception:
+                    icon = 0
+                    self.errors.append(f"Invalid icon.")
+
+                output.append(icon)
                 
             elif code[0] == "BACKGROUND":
                 output.append(OcarinaControlCode.BACKGROUND.value)
@@ -416,6 +432,152 @@ class MessageOcarina(Message):
             pass
             
         return output
+
+    def _decode(self):
+        boxes = []
+        box = Textbox()
+
+        msgDataBytes = self.save() 
+
+        if msgDataBytes is None:
+            return None
+
+        i = 0
+        while i < len(msgDataBytes):
+            cur_byte = msgDataBytes[i]
+
+            if cur_byte in (  OcarinaControlCode.AWAIT_BUTTON,
+                              OcarinaControlCode.END,
+                              OcarinaControlCode.DC,
+                              OcarinaControlCode.DI,
+                              OcarinaControlCode.NS):
+                pass
+
+            elif cur_byte in ( 
+                                OcarinaControlCode.EVENT,
+                                OcarinaControlCode.PERSISTENT):
+                box.endType = BoxEndType.NoEndMarker
+
+            elif cur_byte == OcarinaControlCode.NEW_BOX:
+                boxes.append(box)
+
+                if box.isLast:
+                    return boxes
+                else:
+                    box = Textbox()
+                
+            elif cur_byte == OcarinaControlCode.DELAY:
+                box.endType = BoxEndType.NoEndMarker
+                boxes.append(box)
+                box = Textbox()
+                i += 1
+
+            elif cur_byte == OcarinaControlCode.HIGH_SCORE:
+                i += 1
+                highSc = msgDataBytes[i]
+            
+                if highSc in highScorePreviewPresets:
+                        for char in highScorePreviewPresets[highSc]:
+                            box.data.append(ord(char))     
+                else:
+                    box.data.append(ord(' '))       
+
+            elif cur_byte in ( OcarinaControlCode.PLAYER,
+                                OcarinaControlCode.POINTS,
+                                OcarinaControlCode.FISH_WEIGHT,
+                                OcarinaControlCode.GOLD_SKULLTULAS,
+                                OcarinaControlCode.MARATHON_TIME,
+                                OcarinaControlCode.RACE_TIME,
+                                OcarinaControlCode.TIME):
+                
+                if cur_byte in controlCharPreviewPresets:
+                        for char in controlCharPreviewPresets[cur_byte]:
+                            box.data.append(ord(char))     
+                else:
+                    box.data.append(ord(' '))     
+
+            elif cur_byte == OcarinaControlCode.ICON:   
+                box.data.append(cur_byte)
+                icon = msgDataBytes[i + 1]                
+                box.data.append(icon)
+                box.iconUsed = icon      
+                i += 1         
+
+            elif cur_byte in (OcarinaControlCode.SPEED,
+                              OcarinaControlCode.SHIFT,
+                              OcarinaControlCode.COLOR):
+                box.data.append(cur_byte)
+                box.data.append(msgDataBytes[i + 1])
+                i += 1
+
+            elif cur_byte == OcarinaControlCode.FADE:
+                i += 1
+                box.isLast = True
+                box.endType = BoxEndType.NoEndMarker
+
+            elif cur_byte == OcarinaControlCode.FADE2:
+                i += 2
+                box.isLast = True
+                box.endType = BoxEndType.NoEndMarker
+
+            elif cur_byte in (OcarinaControlCode.JUMP,
+                              OcarinaControlCode.SOUND):
+                i += 2
+
+            elif cur_byte == OcarinaControlCode.BACKGROUND:
+                box.data.append(cur_byte)
+                box.data.append(msgDataBytes[i + 1])
+                box.data.append(msgDataBytes[i + 2])
+                box.data.append(msgDataBytes[i + 3])
+                box.hasBackground = True
+                i += 3
+
+            elif cur_byte == OcarinaControlCode.TWO_CHOICES:
+                box.data.append(cur_byte)
+                box.endType = BoxEndType.NoEndMarker
+                box.numChoices = 2
+
+            elif cur_byte == OcarinaControlCode.THREE_CHOICES:
+                box.data.append(cur_byte)
+                box.endType = BoxEndType.NoEndMarker
+                box.numChoices = 3
+
+            elif cur_byte == OcarinaControlCode.LINE_BREAK:
+                box.data.append(cur_byte)
+                box.numLinebreaks += 1
+
+            else:
+                box.data.append(cur_byte)
+            
+            i += 1
+
+        if box:
+            boxes.append(box)
+
+        return boxes
+
+    def getPreview(self, numBox, boxes = None):
+
+        if boxes is None:
+            boxes = self._decode()
+
+        if boxes is None:
+            return None
+
+        previewer = zeldaMessagePreview.MessagePreview(self.boxType, boxes)
+        return previewer.getPreview(numBox)
+    
+    def getFullPreview(self, boxes = None):
+        if boxes is None:
+            boxes = self._decode()
+
+        if boxes is None:
+            return None
+        
+        previewer = zeldaMessagePreview.MessagePreview(self.boxType, boxes)
+        return previewer.getFullPreview()
+
+
 
 class MessageMajora(Message):
     
@@ -673,3 +835,19 @@ class MessageMajora(Message):
             pass
 
         return output
+
+    def getPreview(self, numBox, boxes = None):
+        return None
+    
+    def getFullPreview(self, boxes = None):
+        return None
+
+class Textbox():
+    def __init__(self):
+        self.isLast = False
+        self.endType = BoxEndType.Triangle
+        self.iconUsed = -1
+        self.numChoices = 0
+        self.numLinebreaks = 0
+        self.hasBackground = False
+        self.data = bytearray()

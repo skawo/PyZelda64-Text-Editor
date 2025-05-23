@@ -3,6 +3,7 @@ import zeldaMessage
 from zeldaEnums import *
 from messageTextEditor import CustomPlainTextEdit
 from hSpinBox import InputBox
+from qLabelPreviewer import QLabelPreviewer
 
 from PyQt6 import  QtGui, QtWidgets
 from PyQt6.QtCore import Qt
@@ -89,15 +90,14 @@ class TextEditorWidget(QtWidgets.QWidget):
         # --------------- Message Preview
 
         messagePreviewLayout = QtWidgets.QVBoxLayout()
-        messagePreview = QtWidgets.QLabel()
-        messagePreview.setFixedWidth(320)
-        messagePreviewLayout.addWidget(messagePreview)
+        self.messagePreview = QLabelPreviewer()
+        messagePreviewLayout.addWidget(self.messagePreview)
 
         # ------------------------------
 
-        mainLayout.addLayout(messageTableLayout, 0)
-        mainLayout.addLayout(self.messageEditLayout, 1)
-        mainLayout.addLayout(messagePreviewLayout, 2)
+        mainLayout.addLayout(messageTableLayout,True)
+        mainLayout.addLayout(self.messageEditLayout)
+        mainLayout.addLayout(messagePreviewLayout,True)
 
         self.setLayout(mainLayout)
         self.changesMade = False
@@ -209,6 +209,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.boxTypeCombo.blockSignals(True)
     
         self.curMessage = self.getCurrentMessage()
+        self.messagePreview.clear
 
         if self.curMessage is not None:
             self.messageEditor.setPlainText(self.curMessage.textData)
@@ -223,13 +224,28 @@ class TextEditorWidget(QtWidgets.QWidget):
             else:
                 self.boxTypeCombo.setCurrentText(OcarinaTextboxType(self.curMessage.boxType).name)
 
+        self.updateMsgPreview()
         self.messageEditor.blockSignals(False)
         self.boxPositionCombo.blockSignals(False)
         self.boxTypeCombo.blockSignals(False)
 
     def messageTextChanged(self):
         self.curMessage.textData = self.messageEditor.toPlainText()
+        self.updateMsgPreview()
         self.updateCurrentMsgRow()
+
+    def updateMsgPreview(self):
+        img = self.curMessage.getFullPreview()
+
+        if img is not None:
+            pxm = QtGui.QPixmap.fromImage(img)
+            self.messagePreview.setPixmap(pxm.scaledToWidth(self.messagePreview.width(), Qt.TransformationMode.SmoothTransformation))
+            self.messagePreview.setGraphicsEffect(None)
+        else:
+            effect = QtWidgets.QGraphicsOpacityEffect()
+            effect.setOpacity(0.7)
+            self.messagePreview.setGraphicsEffect(effect)
+
 
     def boxTypeChanged(self):
         if self.messageMode == MessageMode.Majora:

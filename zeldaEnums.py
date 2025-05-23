@@ -1,13 +1,24 @@
+from PyQt6.QtGui import QColor
 from enum import IntEnum
 
 MAX_MES_SIZE = 1280
 SAVE_TABLE_FILENAME = "message_data_static_NES"
 SAVE_STRINGS_FILENAME = "message_data_static_NES"
+XPOS_DEFAULT = 32
+YPOS_DEFAULT = 8
+SCALE_DEFAULT = 0.75
+LINEBREAK_SIZE = 12
+ABUTTON_COLOR = QColor(50, 205, 50)
 
 class ParseErrors(IntEnum):
     NoError = 0
     Parse = 1
     Length = 2
+
+class BoxEndType(IntEnum):
+    NoEndMarker = 0
+    Triangle = 1
+    Box = 2
 
 class DestinationMode(IntEnum):
     Files = 0
@@ -136,7 +147,7 @@ class OcarinaMsgColor(IntEnum):
 class OcarinaHighScore(IntEnum):
     ARCHERY = 0x00
     POE_POINTS = 0x01
-    FISH_WEIGHT = 0x02
+    FISHING = 0x02
     HORSE_RACE = 0x03
     MARATHON = 0x04
     HS_UNK = 0x05

@@ -112,7 +112,7 @@ class ContextMenuData:
     HighScoresOcarina = [
         ("Archery", f'{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore.ARCHERY.name}', ""),
         ("Poe Salesman Points", f'{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore.POE_POINTS.name}', ""),
-        ("Fish weight", f'{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore.FISH_WEIGHT.name}', ""),
+        ("Fish weight", f'{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore.FISHING.name}', ""),
         ("Horse race time", f'{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore.HORSE_RACE.name}', ""),
         ("Running Man's marathon", f'{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore.MARATHON.name}', ""),
         ("Dampe race", f'{OcarinaControlCode.HIGH_SCORE.name}:{OcarinaHighScore.DAMPE_RACE.name}', "")
