@@ -1,4 +1,5 @@
 from PyQt6.QtGui import QImage, QColor
+from zeldaEnums import OcarinaIcon, OcarinaControlCode, A_BUTTON_COLOR
 
 def reverseAlphaMask(image):
 
@@ -38,3 +39,29 @@ def colorize(image, color):
             result.setPixel(x, y, newColor.rgba())
     
     return result
+
+
+boxDefault = colorize(reverseAlphaMask(QImage('res/gfx/Box_Default.png')), QColor(0, 0, 0, 170))
+boxWood = colorize(QImage('res/gfx/Box_Wooden.png'), QColor(70, 50, 30, 230))
+boxBlue = colorize(reverseAlphaMask(QImage('res/gfx/Fading_Box.png')), QColor(0, 10, 50, 170))
+boxStaff = colorize(QImage('res/gfx/Box_Staff.png'), QColor(255, 0, 0, 180))
+
+leftBackground = reverseAlphaMask(QImage("res/gfx/xmes_left.png"))
+rightBackground = reverseAlphaMask(QImage("res/gfx/xmes_right.png"))
+arrow = reverseAlphaMask(QImage("res/gfx/Box_Arrow.png"))
+
+boxEndTriangle = reverseAlphaMask(QImage("res/gfx/Box_Triangle.png"))
+boxEndBox = reverseAlphaMask(QImage("res/gfx/Box_End.png"))
+
+fontDataOcarina = []
+iconDataOcarina = []
+
+for i in range(OcarinaControlCode.D_PAD):
+    fn = f"char_{hex(i)[2:].lower()}"
+    img = reverseAlphaMask(QImage(f"res/gfx/{fn}.png"))
+    fontDataOcarina.append(img)
+
+for i in range(OcarinaIcon.BIG_MAGIC_JAR):
+    fn = f"icon_{str(i).lower()}"   
+    img = QImage(f"res/gfx/{fn}.png")
+    iconDataOcarina.append(img)

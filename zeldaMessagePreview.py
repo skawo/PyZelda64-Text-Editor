@@ -4,7 +4,6 @@ from PyQt6.QtCore import Qt
 
 from zeldaEnums import *
 from zeldaDicts import *
-from font import *
 
 import graphics
 
@@ -57,35 +56,17 @@ class MessagePreview:
             return destImage
         
         if self.boxType == OcarinaTextboxType.Black:
-            imagePath = 'res/gfx/Box_Default.png'
-            color = QColor(0, 0, 0, 170)
-            revAlpha = True
+            sourceImage = graphics.boxDefault
         elif self.boxType == OcarinaTextboxType.Ocarina:
-            imagePath = 'res/gfx/Box_Staff.png'
-            color = QColor(255, 0, 0, 180)
-            revAlpha = False
+            sourceImage = graphics.boxStaff
         elif self.boxType == OcarinaTextboxType.Wooden:
-            imagePath = 'res/gfx/Box_Wooden.png'
-            color = QColor(70, 50, 30, 230)
-            revAlpha = False
+            sourceImage = graphics.boxWood
         elif self.boxType == OcarinaTextboxType.Blue:
-            imagePath = 'res/gfx/Fading_Box.png'
-            color = QColor(0, 10, 50, 170)
-            revAlpha = True
+            sourceImage = graphics.boxBlue
         else:
             destImage.fill(QColor(0, 0, 0))   
             return destImage     
-
-        sourceImage = QImage(imagePath)  
-        return self._drawBoxInternal(destImage, sourceImage, color, revAlpha)
-
-    def _drawBoxInternal(self, destImage, sourceImage, color, rev_alpha):
-
-        if rev_alpha:
-            sourceImage = graphics.reverseAlphaMask(sourceImage)
-
-        sourceImage = graphics.colorize(sourceImage, color)
-
+        
         painter = QPainter(destImage)
         painter.drawImage(0, 0, sourceImage)
         painter.drawImage(sourceImage.width(), 0, sourceImage.mirrored(True, False))
@@ -116,27 +97,24 @@ class MessagePreview:
             curByte = textbox.data[charIdx]
             
             if curByte == OcarinaControlCode.TWO_CHOICES.value:
-                imgArrow = QImage("res/gfx/Box_Arrow.png")
                 xPosArrow = 16
                 yPosArrow = 32
                 
                 for _ in range(2):
-                    self._draw(painter, imgArrow, ABUTTON_COLOR, int(16 * scale), int(16 * scale), xPosArrow, yPosArrow, True)
+                    self._draw(painter, graphics.arrow, A_BUTTON_COLOR, int(16 * scale), int(16 * scale), xPosArrow, yPosArrow, False)
                     yPosArrow += LINEBREAK_SIZE
 
             elif curByte == OcarinaControlCode.THREE_CHOICES.value:
-                imgArrow = QImage("res/gfx/Box_Arrow.png")
                 xPosArrow = 16
                 yPosArrow = 20
                 
                 for _ in range(3):
-                    self._draw(painter, imgArrow, ABUTTON_COLOR, int(16 * scale), int(16 * scale), xPosArrow, yPosArrow, True)
+                    self._draw(painter, graphics.arrow, A_BUTTON_COLOR, int(16 * scale), int(16 * scale), xPosArrow, yPosArrow, False)
                     yPosArrow += LINEBREAK_SIZE
 
             elif curByte == OcarinaControlCode.ICON:
                 icon_n = textbox.data[charIdx + 1]
-                fn = f"icon_{str(icon_n).lower()}"
-                img = QImage(f"res/gfx/{fn}.png")
+                img = graphics.iconDataOcarina[icon_n]
 
                 if img and not img.isNull():
                     if icon_n < OcarinaIcon.FOREST_MEDALLION:
@@ -152,15 +130,15 @@ class MessagePreview:
                 charIdx += 1
 
             elif curByte == OcarinaControlCode.BACKGROUND:
-                left_img = QImage("res/gfx/xmes_left.png")
-                right_img = QImage("res/gfx/xmes_right.png")
-
                 x_pos_bg = 0
                 y_pos_bg = 0
 
-                self._draw(painter, left_img, QColor(255, 255, 255), left_img.width(), left_img.height(), x_pos_bg, y_pos_bg, True)
-                x_pos_bg += left_img.width()
-                self._draw(painter, right_img, QColor(255, 255, 255), left_img.width(), left_img.height(), x_pos_bg, y_pos_bg, True)
+                width = graphics.leftBackground.width()
+                height = graphics.leftBackground.height()
+
+                self._draw(painter, graphics.leftBackground, QColor(255, 255, 255), width, height, x_pos_bg, y_pos_bg, False)
+                x_pos_bg += width
+                self._draw(painter, graphics.rightBackground, QColor(255, 255, 255), width, height, x_pos_bg, y_pos_bg, False)
 
                 charIdx += 3
                 continue
@@ -197,10 +175,8 @@ class MessagePreview:
                 xPos += (FONT_WIDTHS[0] * scale)
             
             else:
-                img = fontDataOcarina[curByte]
-
-                img = graphics.reverseAlphaMask(img)
-
+                img = graphics.fontDataOcarina[curByte]
+                
                 if self.boxType != OcarinaTextboxType.None_Black:
                     shadow = img.copy()
                     shadow = graphics.colorize(shadow, QColor(0, 0, 0))
@@ -218,11 +194,11 @@ class MessagePreview:
 
         if textbox.endType != BoxEndType.NoEndMarker:
             if textbox.endType == BoxEndType.Triangle and textbox.isLast:
-                img = QImage(f"res/gfx/Box_End.png")
+                img = graphics.boxEndBox
             else:
-                img = QImage(f"res/gfx/Box_Triangle.png")
+                img = graphics.boxEndTriangle
 
-            self._draw(painter, img, ABUTTON_COLOR, int(16 * scale), int(16 * scale), 124, 60, True)
+            self._draw(painter, img, A_BUTTON_COLOR, int(16 * scale), int(16 * scale), 124, 60, False)
 
         painter.end()
         return dest_img

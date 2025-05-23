@@ -8,7 +8,7 @@ XPOS_DEFAULT = 32
 YPOS_DEFAULT = 8
 SCALE_DEFAULT = 0.75
 LINEBREAK_SIZE = 12
-ABUTTON_COLOR = QColor(50, 205, 50)
+A_BUTTON_COLOR = QColor(50, 205, 50)
 
 class ParseErrors(IntEnum):
     NoError = 0

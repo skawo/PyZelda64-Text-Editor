@@ -253,6 +253,8 @@ class TextEditorWidget(QtWidgets.QWidget):
         else:
             self.curMessage.boxType = OcarinaTextboxType[self.boxTypeCombo.currentText()]
 
+        self.updateMsgPreview()
+
     def boxPositionChanged(self):
         self.curMessage.boxPosition = TextboxPosition[self.boxPositionCombo.currentText()]
 
