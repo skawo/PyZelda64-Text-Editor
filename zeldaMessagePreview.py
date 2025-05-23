@@ -141,7 +141,6 @@ class MessagePreview:
                 self._draw(painter, graphics.rightBackground, QColor(255, 255, 255), width, height, x_pos_bg, y_pos_bg, False)
 
                 charIdx += 3
-                continue
 
             elif curByte == OcarinaControlCode.SHIFT:
                 num_shift = textbox.data[charIdx + 1]

@@ -342,7 +342,12 @@ class MessageOcarina(Message):
                             i += len('\n')  # Skips next linebreak
                 
                 controlCodeBytes = self._convertControlCode(parsedCode.split(':'), self.errors)
-                data.extend(controlCodeBytes)
+
+                if (controlCodeBytes is not None):
+                    data.extend(controlCodeBytes)
+                else:
+                    self.errors.append("An error occurred parsing a control code.")
+
                 i += 1
                 
         data.append(OcarinaControlCode.END.value)
@@ -429,7 +434,7 @@ class MessageOcarina(Message):
                         errors.append(f"{code[0]} is not a valid control code.")
                         
         except Exception:
-            pass
+            return None
             
         return output
 
@@ -787,7 +792,12 @@ class MessageMajora(Message):
                             i += len('\n')
                 
                 controlCodeBytes = self._convertControlCode(parsedCode.split(':'), self.errors)
-                data.extend(controlCodeBytes)
+
+                if (controlCodeBytes is not None):
+                    data.extend(controlCodeBytes)
+                else:
+                    self.errors.append("An error occurred parsing a control code.")
+                    
                 i += 1
                 
         data.append(MajoraControlCode.END.value)
