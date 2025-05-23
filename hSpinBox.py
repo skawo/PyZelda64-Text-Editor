@@ -96,8 +96,8 @@ class InputBox(QtWidgets.QDialog):
     def show(self, title = ' ', message = ' ', value = 0, min = 0, max = 0xFFFFFFFF):
         self.setWindowTitle(title)
         self.label.setText(message)
-        self.spinbox.setValue(value)
         self.spinbox.setRange(min, max)
+        self.spinbox.setValue(value)
 
         self.move(self.pWidget.geometry().center().x(), self.pWidget.geometry().center().y()) 
         return self.exec()
