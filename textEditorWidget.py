@@ -30,6 +30,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageTable.setHorizontalHeaderLabels(["ID", "Message"])
         self.messageTable.setSelectionBehavior(QtWidgets.QAbstractItemView.SelectionBehavior.SelectRows)
         self.messageTable.setSelectionMode(QtWidgets.QAbstractItemView.SelectionMode.SingleSelection)
+        self.messageTable.setEditTriggers(QtWidgets.QAbstractItemView.EditTrigger.NoEditTriggers)
         self.messageTable.itemSelectionChanged.connect(self.messageTableItemChanged)
         
         headerView = self.messageTable.horizontalHeader()
