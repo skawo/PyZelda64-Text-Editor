@@ -553,17 +553,17 @@ class MessageMajora(Message):
         data = bytearray()
         self.errors = []
 
-        # Add initial data
-        data.append(self.boxType)
-        data.append(self.boxPosition)
-        data.append(self.majoraIcon)
-
-        data.extend(struct.pack('>H', self.majoraJumpTo))
-        data.extend(struct.pack('>h', self.majoraFirstPrice))
-        data.extend(struct.pack('>h', self.majoraSecondPrice))
-
-        data.extend([0xFF, 0xFF])
-
+        data.extend(struct.pack('>BBBHhhBB', 
+                self.boxType,
+                self.boxPosition,
+                self.majoraIcon,
+                self.majoraJumpTo,
+                self.majoraFirstPrice,
+                self.majoraSecondPrice,
+                0xFF,
+                0xFF,
+            ))
+        
         i = 0
         while i < len(self.textData):
             # Not a control code, copy char to output buffer
