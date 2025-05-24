@@ -88,16 +88,23 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditLayout.addWidget(self.messageOptionsFrame)
 
         self.messageEditor = CustomPlainTextEdit()
-        self.messageEditor.setMaximumWidth(700)
         self.messageEditor.textChanged.connect(self.messageTextChanged)
         self.messageEditLayout.addWidget(self.messageEditor)
 
         # --------------- Message Preview
 
         messagePreviewLayout = QtWidgets.QVBoxLayout()
+
+        messagePreviewScrollArea = QtWidgets.QScrollArea()
+        messagePreviewScrollArea.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        messagePreviewScrollArea.setSizeAdjustPolicy(QtWidgets.QScrollArea.SizeAdjustPolicy.AdjustIgnored)
+        
         self.messagePreview = QLabelPreviewer()
         self.messagePreview.setMinimumWidth(256)
-        messagePreviewLayout.addWidget(self.messagePreview)
+        messagePreviewScrollArea.setWidgetResizable(True)
+        messagePreviewScrollArea.setWidget(self.messagePreview)
+        messagePreviewLayout.addWidget(messagePreviewScrollArea)
+        messagePreviewLayout.maximumSize()
 
         # ------------------------------
 
