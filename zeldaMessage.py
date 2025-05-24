@@ -172,6 +172,7 @@ class MessageOcarina(Message):
         while cur_byte != OcarinaControlCode.END:
             read_control_code = False
 
+            # Except stressed characters
             if cur_byte < 0x7F or cur_byte > 0x9E:
                 if cur_byte in OcarinaControlCode:
                     char_data.extend(self._getControlCode(OcarinaControlCode(cur_byte)))
@@ -193,7 +194,7 @@ class MessageOcarina(Message):
                 ):
                     char_data.append(chr(cur_byte))
                 else:
-                    char_data.extend(f"<UNK {cur_byte:X}>")
+                    char_data.extend(f"<BYTE:{cur_byte:X}>")
 
             if self.reader.tell() != len(self.reader.getvalue()):
                 cur_byte = self._get_u8()
@@ -277,7 +278,7 @@ class MessageOcarina(Message):
             else:
                 code_insides = code.name
         except Exception:
-                code_bank.extend(f"<UNK:{code}>")
+                code_bank.extend(f"<BYTE:{code}>")
                 return code_bank
 
         code_bank.extend(f"<{code_insides}>")
@@ -373,9 +374,9 @@ class MessageOcarina(Message):
 
                 val = int(code[1])
 
-                if val > 255: 
+                if val < 0 or val > 255: 
                     val = 0
-                    self.errors.append(f"Value for tag {code[0]} too large.")
+                    self.errors.append(f"Value for tag {code[0]} is invalid.")
 
                 output.append(val)
                 
@@ -383,8 +384,8 @@ class MessageOcarina(Message):
                 output.append(OcarinaControlCode[code[0]].value)
                 fade_amount = int(code[1])
 
-                if fade_amount > 65535: 
-                    self.errors.append(f"Value for tag {code[0]} too large.")
+                if fade_amount < 0 or fade_amount > 65535: 
+                    self.errors.append(f"Value for tag {code[0]} is invalid.")
 
                 fadeBytes = struct.pack(">h", fade_amount) 
                 output.extend(fadeBytes)
@@ -395,8 +396,11 @@ class MessageOcarina(Message):
                 try:
                     icon = OcarinaIcon[code[1]].value
                 except Exception:
-                    icon = 0
-                    self.errors.append(f"Invalid icon.")
+                    try:
+                        icon = int(code[1])
+                    except Exception:
+                        icon = 0
+                        self.errors.append(f"Invalid icon.")
 
                 output.append(icon)
                 
@@ -406,9 +410,33 @@ class MessageOcarina(Message):
                 backgroundBytes = struct.pack(">I", backgroundId) 
                 output.extend(backgroundBytes[1:])
                 
+            elif code[0] == "BYTE":
+                try:
+                    byteVal = int(code[1])
+                except:
+                    byteVal = 0
+                    self.errors.append(f"Invalid byte tag.")
+
+                if byteVal < 0 or byteVal > 255: 
+                    byteVal = 0
+                    self.errors.append(f"Value for tag {code[0]} is invalid.")
+
+                print(byteVal)
+                output.append(byteVal)
+
             elif code[0] == "HIGH_SCORE":
                 output.append(OcarinaControlCode.HIGH_SCORE.value)
-                output.append(OcarinaHighScore[code[1]].value)
+
+                try:
+                    highScore = OcarinaHighScore[code[1]].value
+                except Exception:
+                    try:
+                        highScore = int(code[1])
+                    except Exception:
+                        highScore = 0
+                        self.errors.append(f"Invalid high score.")
+
+                output.append(highScore)
                 
             elif code[0] == "SOUND":
                 output.append(OcarinaControlCode.SOUND.value)
@@ -639,7 +667,7 @@ class MessageMajora(Message):
                         try:
                             char_data.append(MajoraControlCode(cur_byte).name[0])
                         except Exception:
-                            char_data.extend(f"<UNK {cur_byte:X}>")
+                            char_data.extend(f"<BYTE:{cur_byte:X}>")
 
                 # ASCII-mapped characters
                 elif (
@@ -650,7 +678,7 @@ class MessageMajora(Message):
                 ):
                     char_data.append(chr(cur_byte))
                 else:
-                    char_data.extend(f"<UNK {cur_byte:X}>")
+                    char_data.extend(f"<BYTE:{cur_byte:X}>")
 
             if self.reader.tell() != len(self.reader.getvalue()):
                 cur_byte = self._get_u8()
@@ -711,7 +739,7 @@ class MessageMajora(Message):
             else:
                 code_insides = code.name
         except Exception:
-                code_bank.extend(f"<UNK:{code}>")
+                code_bank.extend(f"<BYTE:{code}>")
                 return code_bank
         
         code_bank.extend(f"<{code_insides}>")
@@ -832,6 +860,20 @@ class MessageMajora(Message):
                         soundValue = 0
 
                 output.extend(struct.pack('>H', soundValue))
+
+            elif code[0] == "BYTE":
+                try:
+                    byteVal = int(code[1])
+                except:
+                    byteVal = 0
+                    self.errors.append(f"Invalid byte tag.")
+
+                if byteVal < 0 or byteVal > 255: 
+                    byteVal = 0
+                    self.errors.append(f"Value for tag {code[0]} is invalid.")
+
+                print(byteVal)
+                output.append(byteVal)
 
             else:
                 try:

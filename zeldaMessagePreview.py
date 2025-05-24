@@ -114,17 +114,19 @@ class MessagePreview:
 
             elif curByte == OcarinaControlCode.ICON:
                 icon_n = textbox.data[charIdx + 1]
-                img = graphics.iconDataOcarina[icon_n]
 
-                if img and not img.isNull():
-                    if icon_n < OcarinaIcon.FOREST_MEDALLION:
-                        xPosIcon = xPos - 10
-                        yPosIcon = 36 if self.boxType == OcarinaTextboxType.None_White else 0x10
-                        self._draw(painter, img, QColor(255, 255, 255), 32, 32, xPosIcon, yPosIcon, False)
-                    else:
-                        xPosIcon = xPos - 7
-                        yPosIcon = 36 if self.boxType == OcarinaTextboxType.None_White else 0x14
-                        self._draw(painter, img, QColor(255, 255, 255), 24, 24, xPosIcon, yPosIcon, False)
+                if icon_n < len(graphics.iconDataOcarina):
+                    img = graphics.iconDataOcarina[icon_n]
+                
+                    if img and not img.isNull():
+                        if icon_n < OcarinaIcon.FOREST_MEDALLION:
+                            xPosIcon = xPos - 10
+                            yPosIcon = 36 if self.boxType == OcarinaTextboxType.None_White else 0x10
+                            self._draw(painter, img, QColor(255, 255, 255), 32, 32, xPosIcon, yPosIcon, False)
+                        else:
+                            xPosIcon = xPos - 7
+                            yPosIcon = 36 if self.boxType == OcarinaTextboxType.None_White else 0x14
+                            self._draw(painter, img, QColor(255, 255, 255), 24, 24, xPosIcon, yPosIcon, False)
 
                 xPos += 0x20
                 charIdx += 1
@@ -150,10 +152,11 @@ class MessagePreview:
             elif curByte == OcarinaControlCode.COLOR:
                 color_data_idx = textbox.data[charIdx + 1]
 
-                if (self.boxType == OcarinaTextboxType.Wooden):
-                    textColor = ocarinaWoodTextColors[color_data_idx]
-                else:
-                    textColor = ocarinaTextColors[color_data_idx]
+                if color_data_idx in ocarinaTextColors:
+                    if (self.boxType == OcarinaTextboxType.Wooden):
+                        textColor = ocarinaWoodTextColors[color_data_idx]
+                    else:
+                        textColor = ocarinaTextColors[color_data_idx]
 
                 charIdx += 1
 
@@ -174,18 +177,19 @@ class MessagePreview:
                 xPos += (FONT_WIDTHS[0] * scale)
             
             else:
-                img = graphics.fontDataOcarina[curByte]
-                
-                if self.boxType != OcarinaTextboxType.None_Black:
-                    shadow = graphics.fontDataShadowOcarina[curByte]
-                    painter.drawImage(QRect(int(xPos + 1), int(yPos + 1), int(16 * scale), int(16 * scale)), shadow)
+                if curByte < len(graphics.fontDataOcarina):
+                    img = graphics.fontDataOcarina[curByte]
+                    
+                    if self.boxType != OcarinaTextboxType.None_Black:
+                        shadow = graphics.fontDataShadowOcarina[curByte]
+                        painter.drawImage(QRect(int(xPos + 1), int(yPos + 1), int(16 * scale), int(16 * scale)), shadow)
 
-                img = graphics.colorize(img, textColor)
-                painter.drawImage(QRect(int(xPos), int(yPos), int(16 * scale), int(16 * scale)), img)
+                    img = graphics.colorize(img, textColor)
+                    painter.drawImage(QRect(int(xPos), int(yPos), int(16 * scale), int(16 * scale)), img)
 
-                try:
+                if curByte < len(FONT_WIDTHS):
                     xPos += int(FONT_WIDTHS[curByte - 0x20] * scale)
-                except Exception:
+                else:
                     xPos += 16 * scale             
 
             charIdx += 1
