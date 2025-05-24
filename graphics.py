@@ -54,12 +54,15 @@ boxEndTriangle = reverseAlphaMask(QImage("res/gfx/Box_Triangle.png"))
 boxEndBox = reverseAlphaMask(QImage("res/gfx/Box_End.png"))
 
 fontDataOcarina = []
+fontDataShadowOcarina = []
 iconDataOcarina = []
 
 for i in range(OcarinaControlCode.D_PAD):
     fn = f"char_{hex(i)[2:].lower()}"
     img = reverseAlphaMask(QImage(f"res/gfx/{fn}.png"))
     fontDataOcarina.append(img)
+    img = colorize(img, QColor(0, 0, 0))
+    fontDataShadowOcarina.append(img)
 
 for i in range(OcarinaIcon.BIG_MAGIC_JAR):
     fn = f"icon_{str(i).lower()}"   

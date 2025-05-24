@@ -20,7 +20,7 @@ class MessagePreview:
       
     def getFullPreview(self):
 
-        OUTPUT_IMAGE_X, OUTPUT_IMAGE_Y = self._getImageSizes()
+        OUTPUT_IMAGE_X, OUTPUT_IMAGE_Y = self.getImageSizes()
 
         destImage = QImage(OUTPUT_IMAGE_X, OUTPUT_IMAGE_Y * len(self.boxes), QImage.Format.Format_ARGB32)
         destImage.fill(Qt.GlobalColor.transparent)
@@ -35,7 +35,7 @@ class MessagePreview:
 
         return destImage
     
-    def _getImageSizes(self):
+    def getImageSizes(self):
         x = 256 + 8
         y = 64 + 8
 
@@ -47,7 +47,7 @@ class MessagePreview:
     
     def _drawBox(self):
 
-        OUTPUT_IMAGE_X, OUTPUT_IMAGE_Y = self._getImageSizes()
+        OUTPUT_IMAGE_X, OUTPUT_IMAGE_Y = self.getImageSizes()
 
         destImage = QImage(OUTPUT_IMAGE_X, OUTPUT_IMAGE_Y, QImage.Format.Format_ARGB32)
         destImage.fill(Qt.GlobalColor.transparent)
@@ -166,7 +166,7 @@ class MessagePreview:
                     yPos += LINEBREAK_SIZE
 
                 if ((textbox.numChoices == 2 and yPos >= 32) or 
-                    (textbox.numChoices  == 3 and yPos >= 20) or 
+                    (textbox.numChoices == 3 and yPos >= 20) or 
                     (textbox.iconUsed != -1 and yPos > 12)):
                     xPos = 2 * XPOS_DEFAULT
 
@@ -177,8 +177,7 @@ class MessagePreview:
                 img = graphics.fontDataOcarina[curByte]
                 
                 if self.boxType != OcarinaTextboxType.None_Black:
-                    shadow = img.copy()
-                    shadow = graphics.colorize(shadow, QColor(0, 0, 0))
+                    shadow = graphics.fontDataShadowOcarina[curByte]
                     painter.drawImage(QRect(int(xPos + 1), int(yPos + 1), int(16 * scale), int(16 * scale)), shadow)
 
                 img = graphics.colorize(img, textColor)

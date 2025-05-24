@@ -14,11 +14,11 @@ class QLabelPreviewer(QtWidgets.QLabel):
         if setOg:
             self.pixmapOg = pixmap.copy()
 
-        return super().setPixmap(pixmap)
+        return super().setPixmap(pixmap.scaledToWidth(self.width(), Qt.TransformationMode.SmoothTransformation))
 
     def resizeEvent(self, a0):
         if self.pixmapOg is not None:
-            self.setPixmap(self.pixmapOg.scaledToWidth(self.width(), Qt.TransformationMode.SmoothTransformation), False)
+            self.setPixmap(self.pixmapOg, False)
     
         return super().resizeEvent(a0)
     

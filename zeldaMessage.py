@@ -6,7 +6,8 @@ import zeldaMessagePreview
 from zeldaEnums import *
 from zeldaDicts import *
 from io import BytesIO
-from PyQt6 import QtGui, QtWidgets
+
+from dataclasses import dataclass, field
 
 def getMessageList(tableData, stringData, mode):
     messageRecordList = []
@@ -438,7 +439,7 @@ class MessageOcarina(Message):
             
         return output
 
-    def _decode(self):
+    def makePreviewData(self):
         boxes = []
         box = Textbox()
 
@@ -564,7 +565,7 @@ class MessageOcarina(Message):
     def getPreview(self, numBox, boxes = None):
 
         if boxes is None:
-            boxes = self._decode()
+            boxes = self.makePreviewData()
 
         if boxes is None:
             return None
@@ -574,7 +575,7 @@ class MessageOcarina(Message):
     
     def getFullPreview(self, boxes = None):
         if boxes is None:
-            boxes = self._decode()
+            boxes = self.makePreviewData()
 
         if boxes is None:
             return None
@@ -852,12 +853,13 @@ class MessageMajora(Message):
     def getFullPreview(self, boxes = None):
         return None
 
-class Textbox():
-    def __init__(self):
-        self.isLast = False
-        self.endType = BoxEndType.Triangle
-        self.iconUsed = -1
-        self.numChoices = 0
-        self.numLinebreaks = 0
-        self.hasBackground = False
-        self.data = bytearray()
+
+@dataclass
+class Textbox:
+    isLast: bool = False
+    endType: BoxEndType = BoxEndType.Triangle
+    iconUsed: int = -1
+    numChoices: int = 0
+    numLinebreaks: int = 0
+    hasBackground: bool = False
+    data: bytearray = field(default_factory=bytearray)

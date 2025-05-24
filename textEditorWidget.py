@@ -1,4 +1,5 @@
 import zeldaMessage
+import zeldaMessagePreview
 
 from zeldaEnums import *
 from messageTextEditor import CustomPlainTextEdit
@@ -6,7 +7,8 @@ from hSpinBox import InputBox
 from qLabelPreviewer import QLabelPreviewer
 
 from PyQt6 import  QtGui, QtWidgets
-from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPainter
+from PyQt6.QtCore import Qt, QRect
 
 class TextEditorWidget(QtWidgets.QWidget):
 
@@ -14,8 +16,10 @@ class TextEditorWidget(QtWidgets.QWidget):
         super().__init__()
 
         self.messageList = None
+        self.boxDataLast = None
 
-        mainLayout = QtWidgets.QHBoxLayout()
+        splitter = QtWidgets.QSplitter()
+        splitter.setHandleWidth(0)
 
         # --------------- Message Grid
 
@@ -92,15 +96,27 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         messagePreviewLayout = QtWidgets.QVBoxLayout()
         self.messagePreview = QLabelPreviewer()
+        self.messagePreview.setMinimumWidth(256)
         messagePreviewLayout.addWidget(self.messagePreview)
 
         # ------------------------------
 
-        mainLayout.addLayout(messageTableLayout,True)
-        mainLayout.addLayout(self.messageEditLayout)
-        mainLayout.addLayout(messagePreviewLayout,True)
+        widgetsA = QtWidgets.QWidget(self)
+        widgetsB = QtWidgets.QWidget(self)
+        widgetsC = QtWidgets.QWidget(self)
 
-        self.setLayout(mainLayout)
+        widgetsA.setLayout(messageTableLayout)
+        widgetsB.setLayout(self.messageEditLayout)
+        widgetsC.setLayout(messagePreviewLayout)
+
+        splitter.addWidget(widgetsA)
+        splitter.addWidget(widgetsB)
+        splitter.addWidget(widgetsC)
+
+        topLayout = QtWidgets.QHBoxLayout()
+        topLayout.addWidget(splitter)
+
+        self.setLayout(topLayout)
         self.changesMade = False
 
         return
@@ -225,7 +241,7 @@ class TextEditorWidget(QtWidgets.QWidget):
             else:
                 self.boxTypeCombo.setCurrentText(OcarinaTextboxType(self.curMessage.boxType).name)
 
-        self.updateMsgPreview()
+        self.updateMsgPreview(True)
         self.messageEditor.blockSignals(False)
         self.boxPositionCombo.blockSignals(False)
         self.boxTypeCombo.blockSignals(False)
@@ -235,12 +251,38 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.updateMsgPreview()
         self.updateCurrentMsgRow()
 
-    def updateMsgPreview(self):
-        img = self.curMessage.getFullPreview()
+    def updateMsgPreview(self, force = False):
+
+        boxData = self.curMessage.makePreviewData()
+        img = None
+
+        if boxData is not None:
+            previewer = zeldaMessagePreview.MessagePreview(self.curMessage.boxType, boxData)
+            _, OUTPUT_IMAGE_Y = previewer.getImageSizes()
+
+            if self.boxDataLast is not None and len(boxData) == len(self.boxDataLast) and not force:
+                img = self.messagePreview.pixmapOg.copy()
+                painter = QPainter(img)
+
+                for i, box in enumerate(boxData):
+                    if box != self.boxDataLast[i]:
+                        newPreview = previewer.getPreview(i)
+
+                        if newPreview is not None:
+                            painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+                            painter.drawImage(0, OUTPUT_IMAGE_Y * i, newPreview)
+                        else:
+                            img = None
+                            break
+
+                painter.end()
+            else:
+                img = QtGui.QPixmap.fromImage(self.curMessage.getFullPreview())
+
+        self.boxDataLast = boxData
 
         if img is not None:
-            pxm = QtGui.QPixmap.fromImage(img)
-            self.messagePreview.setPixmap(pxm.scaledToWidth(self.messagePreview.width(), Qt.TransformationMode.SmoothTransformation))
+            self.messagePreview.setPixmap(img)
             self.messagePreview.setGraphicsEffect(None)
         else:
             effect = QtWidgets.QGraphicsOpacityEffect()
@@ -254,7 +296,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         else:
             self.curMessage.boxType = OcarinaTextboxType[self.boxTypeCombo.currentText()]
 
-        self.updateMsgPreview()
+        self.updateMsgPreview(True)
 
     def boxPositionChanged(self):
         self.curMessage.boxPosition = TextboxPosition[self.boxPositionCombo.currentText()]
