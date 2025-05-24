@@ -19,7 +19,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.boxDataLast = None
 
         splitter = QtWidgets.QSplitter()
-        splitter.setHandleWidth(0)
+        splitter.setHandleWidth(3)
 
         # --------------- Message Grid
 
@@ -100,6 +100,10 @@ class TextEditorWidget(QtWidgets.QWidget):
         messagePreviewLayout.addWidget(self.messagePreview)
 
         # ------------------------------
+
+        messageTableLayout.setContentsMargins(0, 0, 0, 0)
+        self.messageEditLayout.setContentsMargins(0, 0, 0, 0)
+        messagePreviewLayout.setContentsMargins(0, 0, 0, 0)
 
         widgetsA = QtWidgets.QWidget(self)
         widgetsB = QtWidgets.QWidget(self)

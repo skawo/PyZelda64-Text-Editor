@@ -24,7 +24,6 @@ class MainEditorWindow(QtWidgets.QMainWindow):
 
         self.setWindowIcon(QtGui.QIcon('res/z64text.ico'))
 
-        self.statusBar()
         mainMenu = self.menuBar()
 
         fileMenu = mainMenu.addMenu('File')
@@ -86,7 +85,7 @@ class MainEditorWindow(QtWidgets.QMainWindow):
     
         aboutMenu.addAction(aboutAction)
 
-        self._changeStatusBarEnableStatus(False)
+        self._changeMenuItemsEnableStatus(False)
 
     def CreateEditor(self):
         self.messageEditor = textEditorWidget.TextEditorWidget(self)
@@ -204,10 +203,10 @@ class MainEditorWindow(QtWidgets.QMainWindow):
                     if messageList is None:
                         QMessageBox.information(self, 'Error', 'An error occurred while parsing the data. Are you sure you chose the right game?')
                     else:
-                        self._changeStatusBarEnableStatus(True)
+                        self._changeMenuItemsEnableStatus(True)
                         self.messageEditor.populateEditor(messageList, mode)
     
-    def _changeStatusBarEnableStatus(self, set):
+    def _changeMenuItemsEnableStatus(self, set):
 
         toEnable = [self.reSortAction, 
                     self.importDataAction, 
