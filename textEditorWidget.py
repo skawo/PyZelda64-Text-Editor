@@ -264,7 +264,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
     def updateMsgPreview(self, force = False):
 
-        boxData = self.curMessage.makePreviewData()
+        boxData = self.curMessage.preparePreviewData()
         img = None
 
         if boxData is not None:
@@ -288,7 +288,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
                 painter.end()
             else:
-                img = QtGui.QPixmap.fromImage(self.curMessage.getFullPreview())
+                img = QtGui.QPixmap.fromImage(self.curMessage.getFullPreview(boxData))
 
         self.boxDataLast = boxData
 

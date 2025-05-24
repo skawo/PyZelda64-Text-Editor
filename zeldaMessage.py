@@ -439,7 +439,7 @@ class MessageOcarina(Message):
             
         return output
 
-    def makePreviewData(self):
+    def preparePreviewData(self):
         boxes = []
         box = Textbox()
 
@@ -453,7 +453,6 @@ class MessageOcarina(Message):
             cur_byte = msgDataBytes[i]
 
             if cur_byte in (  OcarinaControlCode.AWAIT_BUTTON,
-                              OcarinaControlCode.END,
                               OcarinaControlCode.DC,
                               OcarinaControlCode.DI,
                               OcarinaControlCode.NS):
@@ -463,6 +462,9 @@ class MessageOcarina(Message):
                                 OcarinaControlCode.EVENT,
                                 OcarinaControlCode.PERSISTENT):
                 box.endType = BoxEndType.NoEndMarker
+
+            elif cur_byte == OcarinaControlCode.END:
+                box.isLast = True
 
             elif cur_byte == OcarinaControlCode.NEW_BOX:
                 boxes.append(box)
@@ -565,7 +567,7 @@ class MessageOcarina(Message):
     def getPreview(self, numBox, boxes = None):
 
         if boxes is None:
-            boxes = self.makePreviewData()
+            boxes = self.preparePreviewData()
 
         if boxes is None:
             return None
@@ -575,15 +577,13 @@ class MessageOcarina(Message):
     
     def getFullPreview(self, boxes = None):
         if boxes is None:
-            boxes = self.makePreviewData()
+            boxes = self.preparePreviewData()
 
         if boxes is None:
             return None
         
         previewer = zeldaMessagePreview.MessagePreview(self.boxType, boxes)
         return previewer.getFullPreview()
-
-
 
 class MessageMajora(Message):
     
@@ -846,6 +846,9 @@ class MessageMajora(Message):
             pass
 
         return output
+    
+    def preparePreviewData(self):
+        return None
 
     def getPreview(self, numBox, boxes = None):
         return None
