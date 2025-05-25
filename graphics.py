@@ -57,14 +57,14 @@ fontDataOcarina = []
 fontDataShadowOcarina = []
 iconDataOcarina = []
 
-for i in range(OcarinaControlCode.D_PAD):
+for i in range(OcarinaControlCode.D_PAD + 1):
     fn = f"char_{hex(i)[2:].lower()}"
     img = reverseAlphaMask(QImage(f"res/gfx/{fn}.png"))
     fontDataOcarina.append(img)
     img = colorize(img, QColor(0, 0, 0))
     fontDataShadowOcarina.append(img)
 
-for i in range(OcarinaIcon.BIG_MAGIC_JAR):
+for i in range(OcarinaIcon.BIG_MAGIC_JAR + 1):
     fn = f"icon_{str(i).lower()}"   
     img = QImage(f"res/gfx/{fn}.png")
     iconDataOcarina.append(img)
@@ -77,14 +77,14 @@ fontDataMajora = []
 fontDataShadowMajora = []
 iconDataMajora = []
 
-for i in range(MajoraControlCode.D_PAD):
+for i in range(MajoraControlCode.D_PAD + 1):
     fn = f"majora_char_{hex(i)[2:].lower()}"
     img = reverseAlphaMask(QImage(f"res/gfx/{fn}.png"))
     fontDataMajora.append(img)
     img = colorize(img, QColor(0, 0, 0))
     fontDataShadowMajora.append(img)
 
-for i in range(MajoraIcon.EXCLAMATION_MARK):
+for i in range(MajoraIcon.EXCLAMATION_MARK + 1):
     fn = f"majora_icon_{str(i).lower()}"   
     img = QImage(f"res/gfx/{fn}.png")
     iconDataMajora.append(img)

@@ -172,6 +172,7 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.messageOptionsLayout.addWidget(self.firstPriceField, 4, 1)
             self.messageOptionsLayout.addWidget(secondPriceLabel, 5, 0)
             self.messageOptionsLayout.addWidget(self.secondPriceField, 5, 1) 
+            self.iconComboMajora.currentTextChanged.connect(self.majoraIconChanged)
         else:
 
             for tpos in list(TextboxPosition)[:5]:
@@ -235,6 +236,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditor.blockSignals(True)
         self.boxPositionCombo.blockSignals(True)
         self.boxTypeCombo.blockSignals(True)
+        self.iconComboMajora.blockSignals(True)
     
         self.curMessage = self.getCurrentMessage()
         self.messagePreview.clear
@@ -256,6 +258,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditor.blockSignals(False)
         self.boxPositionCombo.blockSignals(False)
         self.boxTypeCombo.blockSignals(False)
+        self.iconComboMajora.blockSignals(False)
 
     def messageTextChanged(self):
         self.curMessage.textData = self.messageEditor.toPlainText()
@@ -268,7 +271,12 @@ class TextEditorWidget(QtWidgets.QWidget):
         img = None
 
         if boxData is not None:
-            previewer = zeldaMessagePreview.MessagePreviewOcarina(self.curMessage.boxType, boxData)
+
+            if self.messageMode == MessageMode.Majora:
+                previewer = zeldaMessagePreview.MessagePreviewMajora(self.curMessage.boxType, False, boxData) 
+            else:
+                previewer = zeldaMessagePreview.MessagePreviewOcarina(self.curMessage.boxType, boxData)
+
             _, OUTPUT_IMAGE_Y = previewer.getImageSizes()
 
             if self.boxDataLast is not None and len(boxData) == len(self.boxDataLast) and not force:
@@ -307,6 +315,10 @@ class TextEditorWidget(QtWidgets.QWidget):
         else:
             self.curMessage.boxType = OcarinaTextboxType[self.boxTypeCombo.currentText()]
 
+        self.updateMsgPreview(True)
+
+    def majoraIconChanged(self):
+        self.curMessage.majoraIcon = MajoraIcon[self.iconComboMajora.currentText()]
         self.updateMsgPreview(True)
 
     def boxPositionChanged(self):

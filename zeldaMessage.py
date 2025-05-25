@@ -919,30 +919,42 @@ class MessageMajora(Message):
             elif cur_byte == MajoraControlCode.DELAY_END:
                 box.endType = BoxEndType.NoEndMarker
                 box.isLast = True
-                boxes.append(box)
-                return boxes
+                break
 
-            elif cur_byte in (MajoraControlCode.NEW_BOX,
-                              MajoraControlCode.NEW_BOX_CENTER):
+            elif cur_byte == MajoraControlCode.NEW_BOX:
                 
-                boxes.append(box)
+                if box.isLast:
+                    break
+                else:
+                    boxes.append(box)
+                    box = Textbox()
+
+            elif cur_byte == MajoraControlCode.NEW_BOX_CENTER:
+
+                box.numLinebreaks -= 1
+
+                if box.numLinebreaks < 0:
+                    box.numLinebreaks = 0
 
                 if box.isLast:
-                    return boxes
+                    break
                 else:
+                    boxes.append(box)
                     box = Textbox()
-                    box.iconUsed = self.majoraIcon
             
             elif cur_byte == MajoraControlCode.DELAY_NEWBOX:
                 i += 2
                 box.numLinebreaks += 1
                 boxes.append(box)
                 box = Textbox()
-                box.iconUsed = self.majoraIcon
 
             elif cur_byte in (MajoraControlCode.DELAY,
                               MajoraControlCode.SOUND):
                 i += 2
+
+            elif cur_byte == MajoraControlCode.BOMBER_CODE:
+                box.numLinebreaks += 1      # ????
+                box.data.append(cur_byte)
 
             elif cur_byte == MajoraControlCode.FADE:
                 i += 2
@@ -959,7 +971,7 @@ class MessageMajora(Message):
                 box.endType = BoxEndType.NoEndMarker
                 box.numChoices = 3
 
-            elif cur_byte == OcarinaControlCode.LINE_BREAK:
+            elif cur_byte == MajoraControlCode.LINE_BREAK:
                 box.data.append(cur_byte)
                 box.numLinebreaks += 1
 
@@ -987,6 +999,9 @@ class MessageMajora(Message):
 
         if box:
             boxes.append(box)
+
+        for box in boxes:
+            box.iconUsed = self.majoraIcon
 
         return boxes
 

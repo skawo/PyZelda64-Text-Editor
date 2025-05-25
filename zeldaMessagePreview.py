@@ -365,7 +365,7 @@ class MessagePreviewMajora:
     def _drawText(self, dest_img, numBox):
 
         textbox = self.boxes[numBox]
-        
+
         xPos, xPosDefault, yPos, scale = self._getTextProperties(textbox.numLinebreaks, textbox.numChoices)
 
         painter = QPainter(dest_img)
@@ -374,6 +374,37 @@ class MessagePreviewMajora:
         charIdx = 0
         numCurLineBreak = 0
 
+        if textbox.iconUsed != MajoraIcon.NO_ICON:
+            img = QImage(24, 24, QImage.Format.Format_ARGB32)
+
+            if textbox.iconUsed  < len(graphics.iconDataMajora):
+                img = graphics.iconDataMajora[textbox.iconUsed]
+
+            if self.isBomberNotebook:
+                yPos = max(6, 18 - (6 * textbox.numLinebreaks))
+                xPos += 0x1C
+
+                xPosIcon = xPosDefault - 2
+                yPosIcon = 12
+
+                if img.width() == 24:
+                    xPosIcon += 4
+                    yPosIcon += 4
+
+                self._draw(painter, img, None, max(16, img.width() - 8), max(16, img.height() - 8), xPosIcon, yPosIcon, False)
+            else:
+                yPos = 26 - (6 * textbox.numLinebreaks)
+                xPos += 0xE
+
+                xPosIcon = xPosDefault - 20
+                yPosIcon = 32 if self.boxType == MajoraTextboxType.None_White else 16
+
+                if img.width() == 24:
+                    xPosIcon += 4
+                    yPosIcon += 4
+
+                self._draw(painter, img, None, img.width(), img.height(), xPosIcon, yPosIcon, False)
+            
         while charIdx < len(textbox.data):
             curByte = textbox.data[charIdx]
 
@@ -384,7 +415,7 @@ class MessagePreviewMajora:
                 xPosArrow = 13
                 yPosArrow = 25
 
-                if textbox.numLineBreaks >= 3:
+                if textbox.numLinebreaks >= 3:
                     yPosArrow += 7
                 
                 for _ in range(2):
@@ -395,7 +426,7 @@ class MessagePreviewMajora:
                 xPosArrow = 13
                 yPosArrow = 13
 
-                if textbox.numLineBreaks >= 3:
+                if textbox.numLinebreaks >= 3:
                     yPosArrow += 7
                 
                 for _ in range(3):
@@ -442,10 +473,10 @@ class MessagePreviewMajora:
                 else:
                     xPos = xPosDefault
 
-                if textbox.numChoices == 2 and numCurLineBreak >= (self.numLinebreaks - 1):
+                if textbox.numChoices == 2 and numCurLineBreak >= (textbox.numLinebreaks - 1):
                     xPos = xPosDefault + (30 if self.isBomberNotebook else 10)
 
-                if textbox.numChoices == 3 and numCurLineBreak >= (self.numLinebreaks - 2):
+                if textbox.numChoices == 3 and numCurLineBreak >= (textbox.numLinebreaks - 2):
                     xPos = xPosDefault + (13 if self.isBomberNotebook else 22)
                 
             else:
@@ -490,7 +521,8 @@ class MessagePreviewMajora:
         if rev_alpha:
             srcImage = graphics.reverseAlphaMask(srcImage)
 
-        srcImage = graphics.colorize(srcImage, color)
+        if color is not None:
+            srcImage = graphics.colorize(srcImage, color)
         
         target_rect = QRect(int(x_pos), int(y_pos), x_size, y_size)
         painter.drawImage(target_rect, srcImage)
