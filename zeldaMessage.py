@@ -512,8 +512,8 @@ class MessageOcarina(Message):
                 i += 1
                 highSc = msgDataBytes[i]
             
-                if highSc in highScorePreviewPresets:
-                        for char in highScorePreviewPresets[highSc]:
+                if highSc in ocarinaHighScorePreviewPresets:
+                        for char in ocarinaHighScorePreviewPresets[highSc]:
                             box.data.append(ord(char))     
                 else:
                     box.data.append(ord(' '))       
@@ -526,8 +526,8 @@ class MessageOcarina(Message):
                                 OcarinaControlCode.RACE_TIME,
                                 OcarinaControlCode.TIME):
                 
-                if cur_byte in controlCharPreviewPresets:
-                        for char in controlCharPreviewPresets[cur_byte]:
+                if cur_byte in ocarinaControlCharPreviewPresets:
+                        for char in ocarinaControlCharPreviewPresets[cur_byte]:
                             box.data.append(ord(char))     
                 else:
                     box.data.append(ord(' '))     
@@ -600,7 +600,7 @@ class MessageOcarina(Message):
         if boxes is None:
             return None
 
-        previewer = zeldaMessagePreview.MessagePreview(self.boxType, boxes)
+        previewer = zeldaMessagePreview.MessagePreviewOcarina(self.boxType, boxes)
         return previewer.getPreview(numBox)
     
     def getFullPreview(self, boxes = None):
@@ -610,7 +610,7 @@ class MessageOcarina(Message):
         if boxes is None:
             return None
         
-        previewer = zeldaMessagePreview.MessagePreview(self.boxType, boxes)
+        previewer = zeldaMessagePreview.MessagePreviewOcarina(self.boxType, boxes)
         return previewer.getFullPreview()
 
 class MessageMajora(Message):
@@ -761,6 +761,7 @@ class MessageMajora(Message):
             ))
         
         i = 0
+
         while i < len(self.textData):
             # Not a control code, copy char to output buffer
             if self.textData[i] not in '<>':
@@ -890,13 +891,124 @@ class MessageMajora(Message):
         return output
     
     def preparePreviewData(self):
-        return None
+        boxes = []
+        box = Textbox()
+
+        msgDataBytes = self.save() 
+
+        if msgDataBytes is None:
+            return None
+
+        i = 11 # Skip the header
+
+        while i < len(msgDataBytes):
+            cur_byte = msgDataBytes[i]
+
+            if cur_byte in (  MajoraControlCode.DC,
+                              MajoraControlCode.DI,
+                              MajoraControlCode.NOSKIP,
+                              MajoraControlCode.NOSKIP_SOUND):
+                pass
+
+            elif cur_byte == MajoraControlCode.PERSISTENT:
+                box.endType = BoxEndType.NoEndMarker
+
+            elif cur_byte == MajoraControlCode.END:
+                box.isLast = True
+
+            elif cur_byte == MajoraControlCode.DELAY_END:
+                box.endType = BoxEndType.NoEndMarker
+                box.isLast = True
+                boxes.append(box)
+                return boxes
+
+            elif cur_byte in (MajoraControlCode.NEW_BOX,
+                              MajoraControlCode.NEW_BOX_CENTER):
+                
+                boxes.append(box)
+
+                if box.isLast:
+                    return boxes
+                else:
+                    box = Textbox()
+                    box.iconUsed = self.majoraIcon
+            
+            elif cur_byte == MajoraControlCode.DELAY_NEWBOX:
+                i += 2
+                box.numLinebreaks += 1
+                boxes.append(box)
+                box = Textbox()
+                box.iconUsed = self.majoraIcon
+
+            elif cur_byte in (MajoraControlCode.DELAY,
+                              MajoraControlCode.SOUND):
+                i += 2
+
+            elif cur_byte == MajoraControlCode.FADE:
+                i += 2
+                box.endType = BoxEndType.NoEndMarker
+                box.isLast = True
+
+            elif cur_byte == MajoraControlCode.TWO_CHOICES:
+                box.data.append(cur_byte)
+                box.endType = BoxEndType.NoEndMarker
+                box.numChoices = 2
+
+            elif cur_byte == MajoraControlCode.THREE_CHOICES:
+                box.data.append(cur_byte)
+                box.endType = BoxEndType.NoEndMarker
+                box.numChoices = 3
+
+            elif cur_byte == OcarinaControlCode.LINE_BREAK:
+                box.data.append(cur_byte)
+                box.numLinebreaks += 1
+
+            elif cur_byte == MajoraControlCode.BACKGROUND:
+                box.data.append(cur_byte)
+                box.data.append(msgDataBytes[i + 1])
+                box.data.append(msgDataBytes[i + 2])
+                box.data.append(msgDataBytes[i + 3])
+                box.hasBackground = True
+                i += 3
+
+            elif cur_byte == MajoraControlCode.SHIFT:
+                box.data.append(cur_byte)
+                box.data.append(msgDataBytes[i + 1])
+                i += 1
+
+            else:
+                try:
+                    for char in majoraControlCharPreviewPresets[cur_byte]:
+                        box.data.append(ord(char))
+                except Exception:
+                    box.data.append(cur_byte)
+
+            i += 1
+
+        if box:
+            boxes.append(box)
+
+        return boxes
 
     def getPreview(self, numBox, boxes = None):
-        return None
+        if boxes is None:
+            boxes = self.preparePreviewData()
+
+        if boxes is None:
+            return None
+
+        previewer = zeldaMessagePreview.MessagePreviewOcarina(self.boxType, boxes)
+        return previewer.getPreview(numBox)
     
     def getFullPreview(self, boxes = None):
-        return None
+        if boxes is None:
+            boxes = self.preparePreviewData()
+
+        if boxes is None:
+            return None
+        
+        previewer = zeldaMessagePreview.MessagePreviewOcarina(self.boxType, boxes)
+        return previewer.getFullPreview()
 
 
 @dataclass

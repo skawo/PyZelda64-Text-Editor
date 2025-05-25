@@ -268,7 +268,7 @@ class TextEditorWidget(QtWidgets.QWidget):
         img = None
 
         if boxData is not None:
-            previewer = zeldaMessagePreview.MessagePreview(self.curMessage.boxType, boxData)
+            previewer = zeldaMessagePreview.MessagePreviewOcarina(self.curMessage.boxType, boxData)
             _, OUTPUT_IMAGE_Y = previewer.getImageSizes()
 
             if self.boxDataLast is not None and len(boxData) == len(self.boxDataLast) and not force:
@@ -281,7 +281,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
                         if newPreview is not None:
                             painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-                            painter.drawImage(0, OUTPUT_IMAGE_Y * i, newPreview)
+                            painter.drawImage(0, OUTPUT_IMAGE_Y * i + zeldaMessagePreview.SPACER_HEIGHT * i, newPreview)
                         else:
                             img = None
                             break

@@ -29,7 +29,7 @@ class ContextMenuData:
     ]
 
     ColorsOcarina = [
-        ("White", f'{OcarinaMsgColor.W.name}', "Will appear black in 'None_White'-type textboxes"),
+        ("White", f'{OcarinaMsgColor.D.name}', "Will appear black in 'None_White'-type textboxes"),
         ("Red", f'{OcarinaMsgColor.R.name}', "Appears orange in 'Wooden'-type textboxes"),
         ("Green", f'{OcarinaMsgColor.G.name}', ""),
         ("Blue", f'{OcarinaMsgColor.B.name}', ""),

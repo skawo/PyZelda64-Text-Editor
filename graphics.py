@@ -1,5 +1,5 @@
 from PyQt6.QtGui import QImage, QColor
-from zeldaEnums import OcarinaIcon, OcarinaControlCode, A_BUTTON_COLOR
+from zeldaEnums import *
 
 def reverseAlphaMask(image):
 
@@ -68,3 +68,23 @@ for i in range(OcarinaIcon.BIG_MAGIC_JAR):
     fn = f"icon_{str(i).lower()}"   
     img = QImage(f"res/gfx/{fn}.png")
     iconDataOcarina.append(img)
+
+boxDefaultBombers = colorize(reverseAlphaMask(QImage('res/gfx/Box_Default.png')), QColor(255, 255, 255, 255))
+boxBombers = colorize(reverseAlphaMask(QImage('res/gfx/majora_Box_Bomber.png')), QColor(250, 253, 213, 255))
+boxRed = colorize(reverseAlphaMask(QImage('res/gfx/Box_Default.png')), QColor(255, 0, 0, 170)) 
+
+fontDataMajora = []
+fontDataShadowMajora = []
+iconDataMajora = []
+
+for i in range(MajoraControlCode.D_PAD):
+    fn = f"majora_char_{hex(i)[2:].lower()}"
+    img = reverseAlphaMask(QImage(f"res/gfx/{fn}.png"))
+    fontDataMajora.append(img)
+    img = colorize(img, QColor(0, 0, 0))
+    fontDataShadowMajora.append(img)
+
+for i in range(MajoraIcon.EXCLAMATION_MARK):
+    fn = f"majora_icon_{str(i).lower()}"   
+    img = QImage(f"res/gfx/{fn}.png")
+    iconDataMajora.append(img)

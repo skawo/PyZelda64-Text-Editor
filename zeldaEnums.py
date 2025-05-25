@@ -135,7 +135,7 @@ class OcarinaControlCode(IntEnum):
     D_PAD = 0xAB
 
 class OcarinaMsgColor(IntEnum):
-    W = 0x40
+    D = 0x40
     R = 0x41
     G = 0x42
     B = 0x43
