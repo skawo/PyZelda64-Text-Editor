@@ -3,12 +3,12 @@ import zeldaMessagePreview
 
 from zeldaEnums import *
 from messageTextEditor import CustomPlainTextEdit
-from hSpinBox import InputBox
+from hSpinBox import *
 from qLabelPreviewer import QLabelPreviewer
 
 from PyQt6 import  QtGui, QtWidgets
 from PyQt6.QtGui import QPainter
-from PyQt6.QtCore import Qt, QRect
+from PyQt6.QtCore import Qt
 
 class TextEditorWidget(QtWidgets.QWidget):
 
@@ -156,9 +156,12 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.iconComboMajora = QtWidgets.QComboBox() 
             self.iconComboMajora.addItems([type.name for type in MajoraIcon])
 
-            self.jumpToField = QtWidgets.QLineEdit()
-            self.firstPriceField = QtWidgets.QLineEdit()
-            self.secondPriceField = QtWidgets.QLineEdit()
+            self.jumpToField = HexSpinBox()
+            self.jumpToField.setRange(0, 0xFFFF)
+            self.firstPriceField = QtWidgets.QSpinBox()
+            self.firstPriceField.setRange(-1, 999)
+            self.secondPriceField = QtWidgets.QSpinBox()
+            self.secondPriceField.setRange(-1, 999)
 
             self.messageOptionsLayout.addWidget(boxTypeLabel, 0, 0)
             self.messageOptionsLayout.addWidget(self.boxTypeCombo, 0, 1)
@@ -172,7 +175,11 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.messageOptionsLayout.addWidget(self.firstPriceField, 4, 1)
             self.messageOptionsLayout.addWidget(secondPriceLabel, 5, 0)
             self.messageOptionsLayout.addWidget(self.secondPriceField, 5, 1) 
+
             self.iconComboMajora.currentTextChanged.connect(self.majoraIconChanged)
+            self.jumpToField.textChanged.connect(self.jumpToFieldChanged)
+            self.firstPriceField.textChanged.connect(self.firstPriceFieldChanged)
+            self.secondPriceField.textChanged.connect(self.secondPriceFieldChanged)
         else:
 
             for tpos in list(TextboxPosition)[:5]:
@@ -236,7 +243,12 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditor.blockSignals(True)
         self.boxPositionCombo.blockSignals(True)
         self.boxTypeCombo.blockSignals(True)
-        self.iconComboMajora.blockSignals(True)
+
+        if self.messageMode == MessageMode.Majora:
+            self.iconComboMajora.blockSignals(True)
+            self.jumpToField.blockSignals(True)
+            self.firstPriceField.blockSignals(True)
+            self.secondPriceField.blockSignals(True)
     
         self.curMessage = self.getCurrentMessage()
         self.messagePreview.clear
@@ -248,9 +260,9 @@ class TextEditorWidget(QtWidgets.QWidget):
             if self.messageMode == MessageMode.Majora:
                 self.boxTypeCombo.setCurrentText(MajoraTextboxType(self.curMessage.boxType).name)
                 self.iconComboMajora.setCurrentText(MajoraIcon(self.curMessage.majoraIcon).name)
-                self.jumpToField.setText(zeldaMessage.formatMessageID(self.curMessage.majoraJumpTo))
-                self.firstPriceField.setText(str(self.curMessage.majoraFirstPrice))
-                self.secondPriceField.setText(str(self.curMessage.majoraSecondPrice))
+                self.jumpToField.setValue(self.curMessage.majoraJumpTo)
+                self.firstPriceField.setValue(self.curMessage.majoraFirstPrice)
+                self.secondPriceField.setValue(self.curMessage.majoraSecondPrice)
             else:
                 self.boxTypeCombo.setCurrentText(OcarinaTextboxType(self.curMessage.boxType).name)
 
@@ -258,7 +270,13 @@ class TextEditorWidget(QtWidgets.QWidget):
         self.messageEditor.blockSignals(False)
         self.boxPositionCombo.blockSignals(False)
         self.boxTypeCombo.blockSignals(False)
-        self.iconComboMajora.blockSignals(False)
+
+        if self.messageMode == MessageMode.Majora:
+            self.iconComboMajora.blockSignals(False)
+            self.jumpToField.blockSignals(False)
+            self.firstPriceField.blockSignals(False)
+            self.secondPriceField.blockSignals(False)
+
 
     def messageTextChanged(self):
         self.curMessage.textData = self.messageEditor.toPlainText()
@@ -308,7 +326,6 @@ class TextEditorWidget(QtWidgets.QWidget):
             effect.setOpacity(0.7)
             self.messagePreview.setGraphicsEffect(effect)
 
-
     def boxTypeChanged(self):
         if self.messageMode == MessageMode.Majora:
            self.curMessage.boxType = MajoraTextboxType[self.boxTypeCombo.currentText()] 
@@ -323,6 +340,15 @@ class TextEditorWidget(QtWidgets.QWidget):
 
     def boxPositionChanged(self):
         self.curMessage.boxPosition = TextboxPosition[self.boxPositionCombo.currentText()]
+
+    def jumpToFieldChanged(self):
+        self.curMessage.majoraJumpTo = self.jumpToField.value()
+
+    def firstPriceFieldChanged(self):
+        self.curMessage.majoraFirstPrice = self.firstPriceField.value()
+
+    def secondPriceFieldChanged(self):
+        self.curMessage.majoraFirstPrice = self.secondPriceField.value()
 
     def addMessageClicked(self):
         if self.messageList is not None:

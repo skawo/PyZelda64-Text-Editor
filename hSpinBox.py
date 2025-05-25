@@ -4,7 +4,7 @@ class HexSpinBox(QtWidgets.QSpinBox):
     class HexValidator(QtGui.QValidator):
         def __init__(self, min, max):
             super(HexSpinBox.HexValidator, self).__init__()
-            self.valid = set('0123456789abcdef')
+            self.valid = set('0123456789ABCDEF')
             self.min = min
             self.max = max
 

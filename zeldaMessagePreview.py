@@ -85,18 +85,23 @@ class MessagePreviewOcarina:
 
         return destImage
 
-    def _drawText(self, dest_img, numBox):
-
-        textbox = self.boxes[numBox]
-        
-        xPos = XPOS_DEFAULT
-        yPos = 36 if self.boxType == OcarinaTextboxType.None_White else max(YPOS_DEFAULT, (52 - (LINEBREAK_SIZE * textbox.numLinebreaks)) / 2)
-        scale = SCALE_DEFAULT
-
+    def _getTextProperties(self, textbox):
         if self.boxType == OcarinaTextboxType.Credits:
             xPos = 20
             yPos = 48
-            scale = 0.85
+            scale = 0.85       
+        else:
+           xPos = XPOS_DEFAULT
+           yPos = 36 if self.boxType == OcarinaTextboxType.None_White else max(YPOS_DEFAULT, (52 - (LINEBREAK_SIZE * textbox.numLinebreaks)) / 2)
+           scale = SCALE_DEFAULT          
+
+        return xPos, yPos, scale
+
+    def _drawText(self, dest_img, numBox):
+
+        textbox = self.boxes[numBox]
+
+        xPos, yPos, scale = self._getTextProperties(textbox)
 
         painter = QPainter(dest_img)
         painter.setRenderHints(QPainter.RenderHint.SmoothPixmapTransform)
@@ -221,7 +226,6 @@ class MessagePreviewOcarina:
 
         return xPos, yPos
 
-
     def _draw(self, painter, srcImage, color, x_size, y_size, x_pos, y_pos, rev_alpha):
         
         if rev_alpha:
@@ -322,30 +326,30 @@ class MessagePreviewMajora:
 
         return destImage
 
-    def _getTextProperties(self, numLines, numChoices):
+    def _getTextProperties(self, textbox):
         xPos = XPOS_DEFAULT
         xPosDefault = XPOS_DEFAULT
         yPos = YPOS_DEFAULT
         scale = SCALE_DEFAULT
 
-        if numChoices == 2:
+        if textbox.numChoices == 2:
             if self.isBomberNotebook:
                 xPos = XPOS_DEFAULT
             else:
                 xPos = XPOS_DEFAULT
-                yPos = 26 - (6 * numLines)
+                yPos = 26 - (6 * textbox.numLinebreaks)
                 
-        elif numChoices == 3:
+        elif textbox.numChoices == 3:
             if self.isBomberNotebook:
                 xPos = XPOS_DEFAULT + 13
             else:
                 xPos = XPOS_DEFAULT + 22
-                yPos = 26 - (6 * numLines)
+                yPos = 26 - (6 * textbox.numLinebreaks)
         else:
             if self.isBomberNotebook:
                 xPosDefault = 8
                 xPos = xPosDefault
-                yPos = max(6, 18 - (6 * numLines))
+                yPos = max(6, 18 - (6 * textbox.numLinebreaks))
             else:
                 xPosDefault = 32
 
@@ -358,7 +362,7 @@ class MessagePreviewMajora:
                     yPos = 48
                     scale = 0.85
                 else:
-                    yPos = max(YPOS_DEFAULT, (52 - (LINEBREAK_SIZE * numLines)) / 2)
+                    yPos = max(YPOS_DEFAULT, (52 - (LINEBREAK_SIZE * textbox.numLinebreaks)) / 2)
         
         return xPos, xPosDefault, yPos, scale
 
@@ -366,7 +370,7 @@ class MessagePreviewMajora:
 
         textbox = self.boxes[numBox]
 
-        xPos, xPosDefault, yPos, scale = self._getTextProperties(textbox.numLinebreaks, textbox.numChoices)
+        xPos, xPosDefault, yPos, scale = self._getTextProperties(textbox)
 
         painter = QPainter(dest_img)
         painter.setRenderHints(QPainter.RenderHint.SmoothPixmapTransform)
@@ -377,7 +381,7 @@ class MessagePreviewMajora:
         if textbox.iconUsed != MajoraIcon.NO_ICON:
             img = QImage(24, 24, QImage.Format.Format_ARGB32)
 
-            if textbox.iconUsed  < len(graphics.iconDataMajora):
+            if textbox.iconUsed < len(graphics.iconDataMajora):
                 img = graphics.iconDataMajora[textbox.iconUsed]
 
             if self.isBomberNotebook:
