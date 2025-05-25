@@ -997,7 +997,7 @@ class MessageMajora(Message):
         if boxes is None:
             return None
 
-        previewer = zeldaMessagePreview.MessagePreviewOcarina(self.boxType, boxes)
+        previewer = zeldaMessagePreview.MessagePreviewMajora(self.boxType, False, boxes)
         return previewer.getPreview(numBox)
     
     def getFullPreview(self, boxes = None):
@@ -1007,7 +1007,7 @@ class MessageMajora(Message):
         if boxes is None:
             return None
         
-        previewer = zeldaMessagePreview.MessagePreviewOcarina(self.boxType, boxes)
+        previewer = zeldaMessagePreview.MessagePreviewMajora(self.boxType, False, boxes)
         return previewer.getFullPreview()
 
 

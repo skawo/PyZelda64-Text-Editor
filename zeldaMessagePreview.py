@@ -349,11 +349,11 @@ class MessagePreviewMajora:
             else:
                 xPosDefault = 32
 
-                if self.header.box_type == MajoraTextboxType.None_White:
+                if self.boxType == MajoraTextboxType.None_White:
                     yPos = 36
-                elif self.header.box_type == MajoraTextboxType.Ocarina:
+                elif self.boxType == MajoraTextboxType.Ocarina:
                     yPos = 2
-                elif self.header.box_type == MajoraTextboxType.Credits:
+                elif self.boxType == MajoraTextboxType.Credits:
                     xPos = 20
                     yPos = 48
                     scale = 0.85
@@ -380,7 +380,7 @@ class MessagePreviewMajora:
             if MajoraControlCode.A_BUTTON <= curByte <= MajoraControlCode.D_PAD:
                 xPos, yPos = self._drawChar(painter, curByte, scale, majoraSpecificTagTextColor[curByte][self.textColorIndex], xPos, yPos)
 
-            if curByte == MajoraControlCode.TWO_CHOICES:
+            elif curByte == MajoraControlCode.TWO_CHOICES:
                 xPosArrow = 13
                 yPosArrow = 25
 
