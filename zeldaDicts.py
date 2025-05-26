@@ -69,7 +69,7 @@ ocarinaTextColors = {
 }
 
 ocarinaWoodTextColors = {
-    OcarinaMsgColor.D:QColor(0, 0, 0, 255),
+    OcarinaMsgColor.D:QColor(255, 255, 255, 255),
     OcarinaMsgColor.R:QColor(255, 120, 0, 255),
     OcarinaMsgColor.G:QColor(70, 255, 80, 255),
     OcarinaMsgColor.B:QColor(80, 90, 255, 255),
