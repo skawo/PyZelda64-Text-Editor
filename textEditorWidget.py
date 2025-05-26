@@ -17,6 +17,7 @@ class TextEditorWidget(QtWidgets.QWidget):
 
         self.messageList = None
         self.boxDataLast = None
+        self.changesMade = False
 
         splitter = QtWidgets.QSplitter()
         splitter.setHandleWidth(3)
@@ -128,8 +129,6 @@ class TextEditorWidget(QtWidgets.QWidget):
         topLayout.addWidget(splitter)
 
         self.setLayout(topLayout)
-        self.changesMade = False
-
         return
     
     def createModeWidgets(self):
@@ -277,12 +276,6 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.firstPriceField.blockSignals(False)
             self.secondPriceField.blockSignals(False)
 
-
-    def messageTextChanged(self):
-        self.curMessage.textData = self.messageEditor.toPlainText()
-        self.updateMsgPreview()
-        self.updateCurrentMsgRow()
-
     def updateMsgPreview(self, force = False):
 
         boxData = self.curMessage.preparePreviewData()
@@ -326,6 +319,15 @@ class TextEditorWidget(QtWidgets.QWidget):
             effect.setOpacity(0.7)
             self.messagePreview.setGraphicsEffect(effect)
 
+    def _changesMade(self):
+        self.changesMade = True
+
+    def messageTextChanged(self):
+        self.curMessage.textData = self.messageEditor.toPlainText()
+        self.updateMsgPreview()
+        self.updateCurrentMsgRow()
+        self._changesMade()        
+
     def boxTypeChanged(self):
         if self.messageMode == MessageMode.Majora:
            self.curMessage.boxType = MajoraTextboxType[self.boxTypeCombo.currentText()] 
@@ -333,22 +335,28 @@ class TextEditorWidget(QtWidgets.QWidget):
             self.curMessage.boxType = OcarinaTextboxType[self.boxTypeCombo.currentText()]
 
         self.updateMsgPreview(True)
+        self._changesMade()
 
     def majoraIconChanged(self):
         self.curMessage.majoraIcon = MajoraIcon[self.iconComboMajora.currentText()]
         self.updateMsgPreview(True)
+        self._changesMade()
 
     def boxPositionChanged(self):
         self.curMessage.boxPosition = TextboxPosition[self.boxPositionCombo.currentText()]
+        self._changesMade()
 
     def jumpToFieldChanged(self):
         self.curMessage.majoraJumpTo = self.jumpToField.value()
+        self._changesMade()
 
     def firstPriceFieldChanged(self):
         self.curMessage.majoraFirstPrice = self.firstPriceField.value()
+        self._changesMade()
 
     def secondPriceFieldChanged(self):
         self.curMessage.majoraFirstPrice = self.secondPriceField.value()
+        self._changesMade()
 
     def addMessageClicked(self):
         if self.messageList is not None:
@@ -374,6 +382,7 @@ class TextEditorWidget(QtWidgets.QWidget):
                     message.messageId = id
                     self.messageList.append(message)  
                     self.messageTable.selectRow(self.messageTable.rowCount() - 1)    
+                    self._changesMade()
 
             except ValueError:
                 QtWidgets.QMessageBox.information(self, 'Error', 'Invalid message ID.')
@@ -394,6 +403,7 @@ class TextEditorWidget(QtWidgets.QWidget):
                 else:
                     self.curMessage.messageId = id 
                     self.updateCurrentMsgRow()             
+                    self._changesMade()
             except ValueError:
                 QtWidgets.QMessageBox.information(self, 'Error', 'Invalid message ID.')        
 
@@ -402,9 +412,9 @@ class TextEditorWidget(QtWidgets.QWidget):
             index = self.messageTable.selectedIndexes()[0].row()
             self.messageList.remove(self.curMessage)
             self.messageTable.removeRow(index)
+            self._changesMade()
 
     def searchFieldChanged(self):
-
         for index, _ in enumerate(self.messageList): 
             self.messageTable.hideRow(index)
 

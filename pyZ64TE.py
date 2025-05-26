@@ -237,20 +237,25 @@ class MainEditorWindow(QtWidgets.QMainWindow):
     
     def askUnsavedChanges(self):
         if self.messageEditor.changesMade:
-            Reply = QtWidgets.QMessageBox.question(self, 
-                                                  'Unsaved changes', 
-                                                  'You have unsaved changes. Would you like to save them first?', 
-                                                  QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Cancel)
+            Reply = QtWidgets.QMessageBox.question(
+                self,
+                'Unsaved changes',
+                'You have unsaved changes. Would you like to save them first?',
+                buttons=QtWidgets.QMessageBox.StandardButton.Yes | 
+                        QtWidgets.QMessageBox.StandardButton.No | 
+                        QtWidgets.QMessageBox.StandardButton.Cancel
+            )
 
-            if Reply == QtWidgets.QMessageBox.Yes:
-                self.messageEditor.Save()
+            if Reply == QtWidgets.QMessageBox.StandardButton.Yes:
+                self.handleSave()
                 return True
-            elif Reply == QtWidgets.QMessageBox.Cancel:
-                return False      
+            elif Reply == QtWidgets.QMessageBox.StandardButton.Cancel:
+                return False
             else:
                 return True
         else:
             return True
+
         
     def handleAbout(self):
         QtWidgets.QMessageBox.information(self, 'About', 'Zelda 64 Text Editor v. 0.1 by Skawo')
